@@ -58,24 +58,18 @@
     </div>
 
     <script>
-        // --- Web Audio API 効果音ジェネレーター ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function playSound(type) {
             if (!audioCtx) return;
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-
+            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
             const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
             osc.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-
             const now = audioCtx.currentTime;
 
             if (type === "spawn") {
-                // キャラ召喚音（ポコン♪）
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(300, now);
                 osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
@@ -84,7 +78,6 @@
                 osc.start(now);
                 osc.stop(now + 0.1);
             } else if (type === "boss") {
-                // ボス登場音（不穏な警告音風）
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(150, now);
                 osc.frequency.setValueAtTime(100, now + 0.15);
@@ -93,7 +86,6 @@
                 osc.start(now);
                 osc.stop(now + 0.4);
             } else if (type === "defeat") {
-                // 敵撃破音（キィン！）
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(800, now);
                 osc.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
@@ -105,12 +97,11 @@
         }
 
         const SAVE_KEY = "monsterGameSave_PERFECT_FIXED";
-        // キャラ数は5体に調整（スライム, ゾンビ, ボマー, タンクムーン, スズメバチ, ドラゴン）
         let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true] };
         
         function checkSaveDataIntegrity() { 
             if (!saveData.levels || saveData.levels.length < 6) saveData.levels = [1, 1, 1, 1, 1, 1]; 
-            if (!saveData.unlockedUnits) saveData.unlockedUnits = [true, true, true, false, true, true]; 
+            if (!saveData.unlockedUnits || saveData.unlockedUnits.length < 6) saveData.unlockedUnits = [true, true, true, false, true, true]; 
         }
         checkSaveDataIntegrity();
         
@@ -118,12 +109,11 @@
         function unlockAllStages() { saveData.maxUnlockedStage = 7; saveData.unlockedUnits = [true, true, true, true, true, true]; saveGame(); initStageSelect(); }
         function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true] }; initStageSelect(); } }
 
-        // キャラクターリスト（タンクロン削除済み版）
         const monsters = [
             { name: "スライム", icon: "🟢", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false, skill: null },
             { name: "ゾンビ", icon: "🧟", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false, skill: null },
             { name: "ボマー", icon: "💣", cost: 200, cd: 6.0, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true, skill: null },
-            { name: "タンクムーン", icon: "🌝", cost: 300, cd: 4.0, baseHp: 700, speed: 0.4, range: 1, baseAtk: 1, area: false, skill: { name: "高速敵ダメージ軽減", desc: "移動速度2.0以上の敵からのダメージを40%軽減" } },
+            { name: "タンクムーン", icon: "🌝", cost: 300, cd: 4.0, baseHp: 700, speed: 0.4, range: 40, baseAtk: 1, area: false, skill: { name: "高速敵ダメージ軽減", desc: "移動速度2.0以上の敵からのダメージを40%軽減" } },
             { name: "スズメバチ", icon: "🐝", cost: 500, cd: 5.0, baseHp: 100, speed: 3.0, range: 150, baseAtk: 30, area: true, skill: { name: "飛び道具無効", desc: "弓使いなどの遠距離攻撃を完全に無効化する" } },
             { name: "ドラゴン", icon: "🐉", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true, skill: null }
         ];
@@ -140,7 +130,6 @@
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
         let gameRunning = false, activeMonsters = [], activeHeroes = [], projectiles = [], effects = [], currentStage = 1, gameLoopId = null, gameTimer = 0, stageTimerInterval = null, coolDowns = [0, 0, 0, 0, 0, 0];
 
-        // クールダウン管理
         setInterval(() => {
             if (!gameRunning) return;
             monsters.forEach((m, i) => {
@@ -276,7 +265,7 @@
                 money -= m.cost; 
                 coolDowns[index] = m.cd; 
                 document.getElementById("money").innerText = money; 
-                playSound("spawn"); // 召喚音再生！
+                playSound("spawn"); 
 
                 let lvl = saveData.levels[index] || 1; 
                 let multiplier = 1 + (lvl - 1) * 0.15; 
@@ -288,9 +277,7 @@
             let template = enemyTemplates[key]; 
             if(template) {
                 activeHeroes.push({ ...template, x: 730, hp: template.hp, maxHp: template.hp });
-                if (template.isBoss) {
-                    playSound("boss"); // ボス登場音再生！
-                }
+                if (template.isBoss) { playSound("boss"); }
             } 
         }
 
@@ -343,8 +330,7 @@
             ctx.fillStyle = "#555"; ctx.fillRect(715, 260, bw, bh); 
             ctx.fillStyle = "#e74c3c"; ctx.fillRect(715, 260, bw * Math.max(0, enemyCastleHP / maxEnemyCastleHP), bh);
 
-            // 味方ユニットの更新・描画
-            activeMonsters.forEach((m, i) => {
+            activeMonsters.forEach((m) => {
                 let target = activeHeroes.find(h => Math.abs(h.x - m.x) < m.range);
                 if (target) {
                     if (m.name === "ボマー") { 
@@ -366,8 +352,7 @@
 
             let initialEnemyCount = activeHeroes.length;
 
-            // 敵ユニットの更新・描画
-            activeHeroes.forEach((h, i) => {
+            activeHeroes.forEach((h) => {
                 if (h.name === "メェーラム敵") {
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
                     if (target) {
@@ -382,7 +367,7 @@
                 } else {
                     let target = activeMonsters.find(m => { 
                         if (m.name === "ボマー") return false; 
-                        return Math.abs(m.x - h.x) < m.range; 
+                        return Math.abs(m.x - h.x) < h.range; 
                     });
                     if (target) { 
                         if (Math.random() < 0.06) { 
@@ -395,7 +380,7 @@
                                 effects.push({ x: target.x, y: 340, t: "🛡️", life: 10 });
                             } else {
                                 projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
-                                target.hp -= m.atk; // 修正点：敵の通常攻撃
+                                target.hp -= h.atk; 
                             }
                         } 
                     } else if (h.x > 70) {
@@ -410,15 +395,9 @@
 
             activeMonsters = activeMonsters.filter(m => m.hp > 0);
             
-            // 敵撃破時の判定と効果音
-            activeHeroes = activeHeroes.filter(h => {
-                if (h.hp <= 0) {
-                    return false;
-                }
-                return true;
-            });
+            activeHeroes = activeHeroes.filter(h => h.hp > 0);
             if (activeHeroes.length < initialEnemyCount) {
-                playSound("defeat"); // 敵撃破音再生！
+                playSound("defeat"); 
             }
 
             projectiles.forEach(p => {
