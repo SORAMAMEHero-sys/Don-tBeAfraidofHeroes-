@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>モンスターズ・リベンジ：アプデ版</title>
+    <title>モンスターズ・リベンジ：アプデ版（クールダウン実装）</title>
     <style>
         body { 
             text-align: center; 
@@ -47,6 +47,13 @@
             padding: 2px;
             line-height: 1.3;
             vertical-align: top;
+            transition: 0.1s;
+        }
+        /* 追加：クールダウン中の赤枠スタイル */
+        .unit-btn.cd { 
+            border: 4px solid #ff0000 !important; 
+            color: #ff0000 !important; 
+            font-weight: bold; 
         }
         .stage-btn { font-size: 16px; padding: 12px 20px; margin: 8px; background-color: #ff5722; color: white; }
         .up-btn { background-color: #4CAF50; color: white; padding: 6px 12px; font-size: 13px; }
@@ -94,10 +101,6 @@
     </div>
 
     <script>
-        // ==========================================
-        // 【⚠️ ここから下は基本システム（編集禁止エリア）】
-        // セーブキーが固定されているため、データは消えません。
-        // ==========================================
         const SAVE_KEY = "monsterGameSave_PERFECT_FIXED";
 
         let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { 
@@ -125,25 +128,17 @@
                 alert("セーブデータを初期化しました！");
             }
         }
-        // ==========================================
-        // 【⚠️ ここまでシステム領域】
-        // ==========================================
 
-
-        // ==========================================
-        // 【✨ ここから下はパラメータ・カスタマイズ自由エリア】
-        // ==========================================
-        
-        // 味方モンスター定義（スズメバチ追加）
+        // 味方モンスター定義（各ユニットに cd: クールダウン秒数を追加）
         const monsters = [
-            { name: "スライム", icon: "🟢", cost: 50, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false },
-            { name: "ゾンビ", icon: "🧟", cost: 120, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false },
-            { name: "ボマー", icon: "💣", cost: 200, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true },
-            { name: "ドラゴン", icon: "🐉", cost: 3000, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true },
-            { name: "スズメバチ", icon: "🐝", cost: 500, baseHp: 1, speed: 3.0, range: 150, baseAtk: 30, area: true }
+            { name: "スライム", icon: "🟢", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false },
+            { name: "ゾンビ", icon: "🧟", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false },
+            { name: "ボマー", icon: "💣", cost: 200, cd: 6.0, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true },
+            { name: "ドラゴン", icon: "🐉", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true },
+            { name: "スズメバチ", icon: "🐝", cost: 500, cd: 5.0, baseHp: 1, speed: 3.0, range: 150, baseAtk: 30, area: true }
         ];
         
-        // 敵キャラクター定義（ハト助、フクロウ教授追加、自動スケーリング廃止）
+        // 敵キャラクター定義
         const enemyTemplates = {
             "戦士": { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10 },
             "弓使い": { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8 },
@@ -151,18 +146,41 @@
             "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24 },
             "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30 }
         };
-        // ==========================================
-        // 【✨ カスタマイズエリアここまで】
-        // ==========================================
-
 
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000;
         let enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
         let gameRunning = false;
         let activeMonsters = [], activeHeroes = [], projectiles = [], effects = [];
         let currentStage = 1, gameLoopId = null;
-        let gameTimer = 0; // バトル経過時間（秒）カウント用
+        let gameTimer = 0;
         let stageTimerInterval = null;
+
+        // クールダウン管理用の配列（5体分を0で初期化）
+        let coolDowns = [0, 0, 0, 0, 0];
+
+        // 毎フレーム（0.1秒ごと）のクールダウン更新処理
+        setInterval(() => {
+            if (!gameRunning) return;
+            monsters.forEach((m, i) => {
+                let btn = document.getElementById("btn-" + i);
+                if (!btn) return;
+                
+                if (coolDowns[i] > 0) {
+                    coolDowns[i] = Math.max(0, coolDowns[i] - 0.1);
+                    btn.classList.add("cd");
+                    btn.innerHTML = `<span style="font-size:20px;">${m.icon}</span><br><span style="font-size:12px; font-weight:bold;">${Math.ceil(coolDowns[i])}秒</span>`;
+                } else if (btn.classList.contains("cd")) {
+                    btn.classList.remove("cd");
+                    updateUnitBtnDisplay(i, btn);
+                }
+            });
+        }, 100);
+
+        function updateUnitBtnDisplay(i, btn) {
+            let m = monsters[i];
+            let lvl = saveData.levels[i] || 1;
+            btn.innerHTML = `<span style="font-size:20px;">${m.icon}</span><br><span style="font-size:11px;">Lv${lvl}</span><br><span style="font-size:10px; color:#ffcc00;">${m.cost}円</span>`;
+        }
 
         function initStageSelect() {
             document.getElementById("totalXp").innerText = saveData.xp;
@@ -228,19 +246,23 @@
             const container = document.getElementById("unitButtons");
             container.innerHTML = "";
             monsters.forEach((m, i) => {
-                let lvl = saveData.levels[i] || 1;
                 let btn = document.createElement("button");
+                btn.id = "btn-" + i; // IDを付与してクールダウン制御に対応
                 btn.className = "unit-btn";
-                btn.innerHTML = `<span style="font-size:20px;">${m.icon}</span><br><span style="font-size:11px;">Lv${lvl}</span><br><span style="font-size:10px; color:#ffcc00;">${m.cost}円</span>`;
+                updateUnitBtnDisplay(i, btn);
                 btn.onclick = () => spawnMonster(i);
                 container.appendChild(btn);
             });
         }
 
         function spawnMonster(index) {
+            // クールダウン中またはお金不足なら出撃不可
+            if (coolDowns[index] > 0) return;
+            
             let m = monsters[index];
             if (money >= m.cost) {
                 money -= m.cost;
+                coolDowns[index] = m.cd; // クールダウン開始
                 document.getElementById("money").innerText = money;
                 
                 let lvl = saveData.levels[index] || 1;
@@ -263,7 +285,6 @@
             }
         }
 
-        // ステージごとの敵出現ウェーブ制御
         function handleStageWaves(sec) {
             if (currentStage === 1) {
                 if (sec % 3 === 0) spawnEnemy("戦士");
@@ -275,19 +296,16 @@
                 if (sec % 6 === 0) spawnEnemy("弓使い");
                 if (sec % 10 === 0) spawnEnemy("守護騎士");
             } else if (currentStage === 4) {
-                // ステージ4のルール
                 if (sec === 3) spawnEnemy("ハト助");
                 if (sec > 0 && sec % 5 === 0) spawnEnemy("守護騎士");
                 if (sec > 0 && sec % 12 === 0) spawnEnemy("戦士");
                 if (sec > 0 && sec % 20 === 0) spawnEnemy("弓使い");
             } else if (currentStage === 5) {
-                // ステージ5 (BOSS) のルール
                 if (sec === 6) spawnEnemy("フクロウ教授");
                 if (sec === 8 || (sec > 0 && sec % 20 === 0)) spawnEnemy("ハト助");
             }
         }
 
-        // お金自動増加
         setInterval(() => {
             if (!gameRunning) return;
             if (money < 9999) {
@@ -341,7 +359,6 @@
 
             activeHeroes.forEach((h, i) => {
                 let target = activeMonsters.find(m => {
-                    // ボマー移動中は敵の索外（無敵）にする
                     if (m.name === "ボマー") return false;
                     return Math.abs(m.x - h.x) < h.range;
                 });
@@ -377,7 +394,6 @@
                 if (ef.life <= 0) effects.splice(i, 1);
             });
 
-            // 敵を倒したときに300円ドロップする処理
             activeMonsters = activeMonsters.filter(m => {
                 if (m.hp <= 0) {
                     effects.push({ x: m.x, y: 340, t: "💀", life: 15 });
@@ -389,7 +405,7 @@
             activeHeroes = activeHeroes.filter(h => {
                 if (h.hp <= 0) {
                     effects.push({ x: h.x, y: 340, t: "💀", life: 15 });
-                    money += 300; // 敵撃破時に300円獲得！
+                    money += 300;
                     if (money > 9999) money = 9999;
                     document.getElementById("money").innerText = money;
                     return false;
@@ -430,7 +446,6 @@
             
             money = 150;
             playerCastleHP = 1000; maxPlayerCastleHP = 1000;
-            // ステージ5はボス用に敵城HPをガッツリ強化
             enemyCastleHP = stageNum === 5 ? 4000 : (800 + (stageNum * 500)); 
             maxEnemyCastleHP = enemyCastleHP;
             
@@ -440,12 +455,14 @@
             effects = [];
             gameTimer = 0;
             
+            // バトル開始時にクールダウンをリセット
+            coolDowns = [0, 0, 0, 0, 0];
+
             document.getElementById("money").innerText = money;
             initBattleUI();
             
             gameRunning = true;
             
-            // 1秒ごとにタイマーを進めてウェーブを管理
             if(stageTimerInterval) clearInterval(stageTimerInterval);
             stageTimerInterval = setInterval(() => {
                 if(!gameRunning) return;
