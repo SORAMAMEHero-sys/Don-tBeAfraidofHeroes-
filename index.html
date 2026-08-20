@@ -3,27 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>モンスターズ・リベンジ：セーブ完全保護版</title>
+    <title>モンスターズ・リベンジ：育成＆XPシステム版</title>
     <style>
         body { text-align: center; background-color: #222; color: white; font-family: sans-serif; touch-action: manipulation; }
         canvas { border: 4px solid #fff; background: linear-gradient(to bottom, #87CEEB 60%, #8B4513 40%); width: 90%; max-width: 800px; height: auto; }
         .screen { display: none; }
         .screen.active { display: block; }
         button { font-size: 14px; padding: 10px; cursor: pointer; background-color: #ffcc00; border: none; border-radius: 5px; font-weight: bold; margin: 5px; touch-action: manipulation; }
-        .unit-btn { width: 100px; height: 60px; }
+        .unit-btn { width: 90px; height: 60px; font-size: 11px; }
         .stage-btn { font-size: 18px; padding: 15px 30px; margin: 10px; }
+        .up-btn { background-color: #4CAF50; color: white; margin: 5px; padding: 8px 15px; }
     </style>
 </head>
 <body>
 
     <h1>モンスターズ・リベンジ</h1>
 
-    <!-- 1. ステージセレクト画面 -->
+    <!-- 1. ステージセレクト＆メニュー画面 -->
     <div id="stageSelectScreen" class="screen active">
-        <h2>ステージを選んでね</h2>
+        <h2>マップ画面</h2>
+        <p>所持XP: <span id="totalXp">0</span> XP</p>
+        <button onclick="openPowerUpScreen()" style="background-color: #ff5722; color: white; font-size: 16px; padding: 10px 20px;">💪 パワーアップ画面</button>
+        <hr style="width: 50%; border-color: #444;">
+        <h3>ステージを選んでね</h3>
         <div id="stageButtonsContainer"></div>
-        <br><br>
-        <button onclick="resetSaveData()" style="background-color: #d9534f; color: white; font-size: 12px; padding: 5px 10px;">セーブデータをリセット</button>
+        <br>
+        <button onclick="unlockAllStages()" style="background-color: #5bc0de; color: white; font-size: 12px; padding: 5px 10px;">【全ステージ解放】</button>
+        <button onclick="resetSaveData()" style="background-color: #d9534f; color: white; font-size: 12px; padding: 5px 10px;">セーブ初期化</button>
+    </div>
+
+    <!-- 1.5. パワーアップ画面 -->
+    <div id="powerUpScreen" class="screen">
+        <h2>パワーアップ (Lv1 ~ 10)</h2>
+        <p>所持XP: <span id="totalXpUp">0</span> XP</p>
+        <div id="powerUpList"></div>
+        <br>
+        <button onclick="closePowerUpScreen()" style="background-color: #666; color: white;">マップに戻る</button>
     </div>
 
     <!-- 2. バトル画面 -->
@@ -37,44 +52,122 @@
     </div>
 
     <script>
-        // --- セーブデータの安全な読み込み ---
-        let saveData = JSON.parse(localStorage.getItem("monsterGameSave")) || { maxUnlockedStage: 1 };
+        // セーブデータの読み込み
+        let saveData = JSON.parse(localStorage.getItem("monsterGameSave")) || { 
+            maxUnlockedStage: 1, 
+            xp: 0, 
+            levels: [1, 1, 1, 1] // スライム, ゾンビ, ボマー, ドラゴンのレベル
+        };
 
         function saveGame() {
             localStorage.setItem("monsterGameSave", JSON.stringify(saveData));
         }
 
+        function unlockAllStages() {
+            saveData.maxUnlockedStage = 3;
+            saveGame();
+            initStageSelect();
+            alert("すべてのステージが解放されました！");
+        }
+
         function resetSaveData() {
             if (confirm("セーブデータを初期化しますか？")) {
                 localStorage.removeItem("monsterGameSave");
-                saveData = { maxUnlockedStage: 1 };
+                saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1] };
                 initStageSelect();
                 alert("リセットしました！");
             }
         }
 
+        // キャラデータ (ドラゴンはコスト3000円に！ベースHP/ATKにレベル倍率がかかります)
         const monsters = [
-            { name: "スライム", icon: "🧌", cost: 50, hp: 60, speed: 2, atk: 0.5 },
-            { name: "ゾンビ", icon: "🧟", cost: 120, hp: 300, speed: 0.8, atk: 0.3 },
-            { name: "ボマー", icon: "💣", cost: 200, hp: 30, speed: 4, atk: 100 }
+            { name: "スライム", icon: "🧌", cost: 50, baseHp: 60, speed: 2, baseAtk: 0.5, range: "single" },
+            { name: "ゾンビ", icon: "🧟", cost: 120, baseHp: 300, speed: 0.8, baseAtk: 0.3, range: "single" },
+            { name: "ボマー", icon: "💣", cost: 200, baseHp: 30, speed: 4, baseAtk: 100, range: "single" },
+            { name: "ドラゴン", icon: "🐉", cost: 3000, baseHp: 250, speed: 1.2, baseAtk: 2.0, range: "area" }
         ];
+        
         const heroes = [
-            { icon: "⚔️", hp: 40, speed: 1.2 },
-            { icon: "🏹", hp: 20, speed: 1.5 },
-            { icon: "🛡️", hp: 400, speed: 0.5 }
+            { icon: "⚔️", hp: 40, speed: 1.2, atk: 0.5 },
+            { icon: "🏹", hp: 20, speed: 1.5, atk: 0.4 },
+            { icon: "🛡️", hp: 400, speed: 0.5, atk: 0.8 }
         ];
 
-        let money = 100, playerCastleHP = 1000, enemyCastleHP = 1000, gameRunning = false;
+        let money = 100, playerCastleHP = 1000, maxPlayerCastleHP = 1000;
+        let enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
+        let gameRunning = false;
         let activeMonsters = [], activeHeroes = [], currentStage = 1;
         let gameLoopId = null;
 
+        // マップ画面の初期化
+        function initStageSelect() {
+            document.getElementById("totalXp").innerText = saveData.xp;
+            const container = document.getElementById("stageButtonsContainer");
+            container.innerHTML = "";
+            for(let i=1; i<=3; i++) {
+                let b = document.createElement("button");
+                b.className = "stage-btn";
+                let reward = i * 100; // ステージが進むほど貰えるXPが増える
+                b.innerText = i <= saveData.maxUnlockedStage ? `ステージ ${i} (報酬: ${reward}XP)` : `ステージ ${i} 🔒`;
+                b.disabled = i > saveData.maxUnlockedStage;
+                b.onclick = () => startBattle(i);
+                container.appendChild(b);
+            }
+        }
+
+        // パワーアップ画面を開く
+        function openPowerUpScreen() {
+            document.getElementById("stageSelectScreen").classList.remove("active");
+            document.getElementById("powerUpScreen").classList.add("active");
+            document.getElementById("totalXpUp").innerText = saveData.xp;
+            
+            const list = document.getElementById("powerUpList");
+            list.innerHTML = "";
+            monsters.forEach((m, i) => {
+                let lvl = saveData.levels[i];
+                let cost = lvl * 50; // レベルに応じた強化費用
+                let div = document.createElement("div");
+                div.style.margin = "10px";
+                div.innerHTML = `
+                    <span>${m.icon} ${m.name} (Lv: ${lvl}/10)</span>
+                    <button class="up-btn" onclick="upgradeUnit(${i})" ${lvl >= 10 ? "disabled style='background:#999;'" : ""}>
+                        ${lvl >= 10 ? "MAX" : `強化 (${cost}XP)`}
+                    </button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function closePowerUpScreen() {
+            document.getElementById("powerUpScreen").classList.remove("active");
+            document.getElementById("stageSelectScreen").classList.add("active");
+            initStageSelect();
+        }
+
+        function upgradeUnit(index) {
+            let lvl = saveData.levels[index];
+            let cost = lvl * 50;
+            if (lvl < 10 && saveData.xp >= cost) {
+                saveData.xp -= cost;
+                saveData.levels[index]++;
+                saveGame();
+                openPowerUpScreen(); // 画面更新
+            } else if (lvl >= 10) {
+                alert("すでに最大レベルです！");
+            } else {
+                alert("XPが足りません！");
+            }
+        }
+
+        // バトル中のUI（出撃ボタン）初期化
         function initUI() {
             const container = document.getElementById("unitButtons");
             container.innerHTML = "";
             monsters.forEach((m, i) => {
+                let lvl = saveData.levels[i];
                 let btn = document.createElement("button");
                 btn.className = "unit-btn";
-                btn.innerHTML = `${m.icon}<br>${m.cost}円`;
+                btn.innerHTML = `${m.icon} ${m.name}<br>Lv${lvl} / ${m.cost}円`;
                 btn.onclick = () => spawnMonster(i);
                 container.appendChild(btn);
             });
@@ -84,18 +177,28 @@
             if (money >= monsters[index].cost) {
                 money -= monsters[index].cost;
                 document.getElementById("money").innerText = money;
-                activeMonsters.push({ ...monsters[index], x: 70 });
+                
+                // レベルに応じたステータス計算（レベル1ごとにHP・攻撃力が10%アップ）
+                let lvl = saveData.levels[index];
+                let multiplier = 1 + (lvl - 1) * 0.1;
+                let actualHp = monsters[index].baseHp * multiplier;
+                let actualAtk = monsters[index].baseAtk * multiplier;
+
+                activeMonsters.push({ 
+                    ...monsters[index], 
+                    hp: actualHp, 
+                    atk: actualAtk, 
+                    x: 70 
+                });
             }
         }
 
-        // 敵の生成
         setInterval(() => {
             if (!gameRunning) return;
             let type = heroes[Math.floor(Math.random() * heroes.length)];
             activeHeroes.push({ ...type, x: 730, hp: type.hp + (currentStage * 20) });
         }, 2000);
 
-        // お金の自動増加
         setInterval(() => {
             if (!gameRunning) return;
             if (money < 999) {
@@ -108,19 +211,38 @@
             if (!gameRunning) return;
             const ctx = document.getElementById("gameCanvas").getContext("2d");
             ctx.clearRect(0, 0, 800, 400);
+
+            // HPバー描画
+            const barWidth = 70, barHeight = 10;
             ctx.font = "60px Arial";
-            ctx.fillText("🏰", 20, 340); ctx.fillText("👑", 730, 340);
+            ctx.fillText("🏰", 20, 340);
+            ctx.fillStyle = "red"; ctx.fillRect(15, 250, barWidth, barHeight);
+            ctx.fillStyle = "limegreen"; ctx.fillRect(15, 250, barWidth * Math.max(0, playerCastleHP / maxPlayerCastleHP), barHeight);
+            ctx.strokeStyle = "white"; ctx.strokeRect(15, 250, barWidth, barHeight);
+
+            ctx.fillText("👑", 730, 340);
+            ctx.fillStyle = "red"; ctx.fillRect(720, 250, barWidth, barHeight);
+            ctx.fillStyle = "limegreen"; ctx.fillRect(720, 250, barWidth * Math.max(0, enemyCastleHP / maxEnemyCastleHP), barHeight);
+            ctx.strokeStyle = "white"; ctx.strokeRect(720, 250, barWidth, barHeight);
 
             // モンスター更新
             for (let i = activeMonsters.length - 1; i >= 0; i--) {
                 let m = activeMonsters[i];
                 let hit = activeHeroes.length > 0 && m.x + 30 >= activeHeroes[0].x;
-                if (!hit && m.x < 700) m.x += m.speed;
-                else if (m.x >= 700) enemyCastleHP -= 0.5;
-                else {
-                    activeHeroes[0].hp -= m.atk;
+
+                if (!hit && m.x < 700) {
+                    m.x += m.speed;
+                } else if (m.x >= 700) {
+                    enemyCastleHP -= 0.5;
+                } else {
+                    if (m.range === "area") {
+                        activeHeroes.forEach(h => { if (h.x <= m.x + 80) h.hp -= m.atk; });
+                    } else {
+                        activeHeroes[0].hp -= m.atk;
+                    }
                     if (m.name === "ボマー") m.hp = 0;
                 }
+
                 ctx.font = "40px Arial";
                 ctx.fillText(m.icon, m.x, 340);
                 if (m.hp <= 0) activeMonsters.splice(i, 1);
@@ -130,24 +252,33 @@
             for (let i = activeHeroes.length - 1; i >= 0; i--) {
                 let h = activeHeroes[i];
                 let hit = activeMonsters.length > 0 && h.x <= activeMonsters[0].x + 30;
-                if (!hit && h.x > 70) h.x -= h.speed;
-                else if (h.x <= 70) playerCastleHP -= 0.5;
-                else activeMonsters[0].hp -= 0.5;
+
+                if (!hit && h.x > 70) {
+                    h.x -= h.speed;
+                } else if (h.x <= 70) {
+                    playerCastleHP -= 0.5;
+                } else {
+                    activeMonsters[0].hp -= h.atk;
+                }
+
                 ctx.font = "40px Arial";
                 ctx.fillText(h.icon, h.x, 340);
                 if (h.hp <= 0) activeHeroes.splice(i, 1);
             }
 
+            // 勝敗判定
             if (playerCastleHP <= 0 || enemyCastleHP <= 0) {
                 gameRunning = false;
                 cancelAnimationFrame(gameLoopId);
                 if (enemyCastleHP <= 0) {
-                    alert("ステージ " + currentStage + " クリア！");
-                    // 次のステージを解放して即座にセーブ！
+                    let earnedXp = currentStage * 100; // ステージが進むほどXP増加
+                    saveData.xp += earnedXp;
+                    alert(`ステージ ${currentStage} クリア！\n報酬として ${earnedXp} XP を獲得しました！`);
+                    
                     if (currentStage === saveData.maxUnlockedStage && currentStage < 3) {
                         saveData.maxUnlockedStage++;
-                        saveGame(); // ← ここで確実に保存！
                     }
+                    saveGame();
                 } else {
                     alert("敗北しました...");
                 }
@@ -160,11 +291,14 @@
         function startBattle(s) {
             currentStage = s;
             document.getElementById("stageSelectScreen").classList.remove("active");
+            document.getElementById("powerUpScreen").classList.remove("active");
             document.getElementById("battleScreen").classList.add("active");
             document.getElementById("stageTitle").innerText = "ステージ " + s;
             money = 100;
             playerCastleHP = 1000;
+            maxPlayerCastleHP = 1000;
             enemyCastleHP = 800 + (s * 400);
+            maxEnemyCastleHP = enemyCastleHP;
             activeMonsters = [];
             activeHeroes = [];
             document.getElementById("money").innerText = money;
@@ -176,25 +310,11 @@
             gameRunning = false;
             cancelAnimationFrame(gameLoopId);
             document.getElementById("battleScreen").classList.remove("active");
+            document.getElementById("powerUpScreen").classList.remove("active");
             document.getElementById("stageSelectScreen").classList.add("active");
             initStageSelect();
         }
 
-        // ステージ選択ボタン生成
-        function initStageSelect() {
-            const sCont = document.getElementById("stageButtonsContainer");
-            sCont.innerHTML = "";
-            for(let i=1; i<=3; i++) {
-                let b = document.createElement("button");
-                b.className = "stage-btn";
-                b.innerText = i <= saveData.maxUnlockedStage ? "ステージ " + i : "ステージ " + i + " 🔒";
-                b.disabled = i > saveData.maxUnlockedStage;
-                b.onclick = () => startBattle(i);
-                sCont.appendChild(b);
-            }
-        }
-
-        // 起動時
         initStageSelect();
         initUI();
     </script>
