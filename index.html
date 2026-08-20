@@ -59,43 +59,45 @@
 
     <script>
         const SAVE_KEY = "monsterGameSave_PERFECT_FIXED";
-        let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1] };
+        let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true] };
         
-        function checkLevelsLength() { 
-            if (!saveData.levels || saveData.levels.length < 5) saveData.levels = [1, 1, 1, 1, 1]; 
+        function checkSaveDataIntegrity() { 
+            if (!saveData.levels || saveData.levels.length < 6) saveData.levels = [1, 1, 1, 1, 1, 1]; 
+            if (!saveData.unlockedUnits) saveData.unlockedUnits = [true, true, true, false, true, true]; // 初期：タンクムーン(index 3)のみ未解放
         }
-        checkLevelsLength();
+        checkSaveDataIntegrity();
         
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
-        function unlockAllStages() { saveData.maxUnlockedStage = 7; saveGame(); initStageSelect(); }
-        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1] }; initStageSelect(); } }
+        function unlockAllStages() { saveData.maxUnlockedStage = 7; saveData.unlockedUnits = [true, true, true, true, true, true]; saveGame(); initStageSelect(); }
+        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true] }; initStageSelect(); } }
 
-        // 味方ユニット（スズメバチにスキル情報を追加）
+        // キャラクターの並び順：スライム、ゾンビ、ボマー、タンクムーン、スズメバチ、ドラゴン
         const monsters = [
             { name: "スライム", icon: "🟢", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false, skill: null },
             { name: "ゾンビ", icon: "🧟", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false, skill: null },
             { name: "ボマー", icon: "💣", cost: 200, cd: 6.0, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true, skill: null },
-            { name: "ドラゴン", icon: "🐉", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true, skill: null },
-            { name: "スズメバチ", icon: "🐝", cost: 500, cd: 5.0, baseHp: 100, speed: 3.0, range: 150, baseAtk: 30, area: true, skill: { name: "飛び道具無効", desc: "弓使いなどの遠距離攻撃を完全に無効化する" } }
+            { name: "タンクムーン", icon: "🌝", cost: 300, cd: 4.0, baseHp: 700, speed: 0.4, range: 1, baseAtk: 1, area: false, skill: { name: "高速敵ダメージ軽減", desc: "移動速度2.0以上の敵からのダメージを40%軽減" } },
+            { name: "スズメバチ", icon: "🐝", cost: 500, cd: 5.0, baseHp: 100, speed: 3.0, range: 150, baseAtk: 30, area: true, skill: { name: "飛び道具無効", desc: "弓使いなどの遠距離攻撃を完全に無効化する" } },
+            { name: "ドラゴン", icon: "🐉", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true, skill: null }
         ];
         
-        // 敵キャラクター一覧
         const enemyTemplates = {
             "戦士": { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10, isProjectile: false },
             "弓使い": { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8, isProjectile: true },
             "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15, isProjectile: false },
             "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24, isProjectile: false },
             "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false },
-            "メェーラム": { name: "メェーラム", icon: "🐑", hp: 99999, speed: 4.3, range: 45, atk: 5000, isProjectile: false }
+            "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 99999, speed: 4.3, range: 45, atk: 5000, isProjectile: false }
         };
 
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
-        let gameRunning = false, activeMonsters = [], activeHeroes = [], projectiles = [], effects = [], currentStage = 1, gameLoopId = null, gameTimer = 0, stageTimerInterval = null, coolDowns = [0, 0, 0, 0, 0];
+        let gameRunning = false, activeMonsters = [], activeHeroes = [], projectiles = [], effects = [], currentStage = 1, gameLoopId = null, gameTimer = 0, stageTimerInterval = null, coolDowns = [0, 0, 0, 0, 0, 0];
 
         // クールダウン管理
         setInterval(() => {
             if (!gameRunning) return;
             monsters.forEach((m, i) => {
+                if (!saveData.unlockedUnits[i]) return;
                 let btn = document.getElementById("btn-" + i);
                 if (!btn) return;
                 if (coolDowns[i] > 0) { 
@@ -110,7 +112,7 @@
         }, 100);
 
         function updateUnitBtnDisplay(i, btn) { 
-            checkLevelsLength(); 
+            checkSaveDataIntegrity(); 
             let m = monsters[i]; 
             let lvl = saveData.levels[i] || 1; 
             btn.innerHTML = `<span style="font-size:18px;">${m.icon}</span><br><span style="font-size:10px;">Lv${lvl}</span><br><span style="font-size:9px; color:#ffcc00;">${m.cost}円</span>`; 
@@ -130,17 +132,18 @@
             } 
         }
 
-        // パワーアップ画面にスキル表示を追加
+        // パワーアップ画面（未解放キャラは3000XPで解放可能）
         function openPowerUpScreen() { 
-            checkLevelsLength(); 
+            checkSaveDataIntegrity(); 
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("powerUpScreen").classList.add("active"); 
             document.getElementById("totalXpUp").innerText = saveData.xp; 
             const list = document.getElementById("powerUpList"); 
             list.innerHTML = ""; 
+            
             monsters.forEach((m, i) => { 
+                let isUnlocked = saveData.unlockedUnits[i];
                 let lvl = saveData.levels[i] || 1; 
-                let cost = lvl * 100; 
                 let div = document.createElement("div"); 
                 div.style.cssText = "background: rgba(255,255,255,0.05); padding: 10px; margin: 6px auto; max-width: 400px; border-radius: 8px; text-align: left;"; 
                 
@@ -149,15 +152,37 @@
                     skillHtml = `<div style="font-size: 12px; color: #ffcc00; margin-top: 4px;">✨スキル: ${m.skill.name} - ${m.skill.desc}</div>`;
                 }
 
-                div.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size:15px; font-weight: bold;">${m.icon} ${m.name} (Lv:${lvl}/10)</span>
-                        <button class="up-btn" onclick="upgradeUnit(${i})" ${lvl >= 10 ? "disabled style='background:#555;'" : ""}>${lvl >= 10 ? "MAX" : `強化(${cost}XP)`}</button>
-                    </div>
-                    ${skillHtml}
-                `; 
+                if (!isUnlocked) {
+                    div.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size:15px; font-weight: bold; color: #888;">🔒 ${m.icon} ${m.name} (未解放)</span>
+                            <button class="up-btn" style="background-color: #ff9800;" onclick="unlockUnit(${i})">解放(3000XP)</button>
+                        </div>
+                        ${skillHtml}
+                    `;
+                } else {
+                    let cost = lvl * 100;
+                    div.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size:15px; font-weight: bold;">${m.icon} ${m.name} (Lv:${lvl}/10)</span>
+                            <button class="up-btn" onclick="upgradeUnit(${i})" ${lvl >= 10 ? "disabled style='background:#555;'" : ""}>${lvl >= 10 ? "MAX" : `強化(${cost}XP)`}</button>
+                        </div>
+                        ${skillHtml}
+                    `;
+                }
                 list.appendChild(div); 
             }); 
+        }
+
+        function unlockUnit(index) {
+            if (saveData.xp >= 3000) {
+                saveData.xp -= 3000;
+                saveData.unlockedUnits[index] = true;
+                saveGame();
+                openPowerUpScreen();
+            } else {
+                alert("XPが足りません！（3000XP必要です）");
+            }
         }
 
         function closePowerUpScreen() { 
@@ -167,7 +192,7 @@
         }
 
         function upgradeUnit(index) { 
-            checkLevelsLength(); 
+            checkSaveDataIntegrity(); 
             let lvl = saveData.levels[index]; 
             let cost = lvl * 100; 
             if (lvl < 10 && saveData.xp >= cost) { 
@@ -182,11 +207,13 @@
             }
         }
 
+        // バトル画面：解放されているキャラのみボタンを表示（未解放は飛ばす）
         function initBattleUI() { 
-            checkLevelsLength(); 
+            checkSaveDataIntegrity(); 
             const container = document.getElementById("unitButtons"); 
             container.innerHTML = ""; 
             monsters.forEach((m, i) => { 
+                if (!saveData.unlockedUnits[i]) return; // 未解放キャラは飛ばす
                 let btn = document.createElement("button"); 
                 btn.id = "btn-" + i; 
                 btn.className = "unit-btn"; 
@@ -197,6 +224,7 @@
         }
 
         function spawnMonster(index) { 
+            if (!saveData.unlockedUnits[index]) return;
             if (coolDowns[index] > 0) return; 
             let m = monsters[index]; 
             if (money >= m.cost) { 
@@ -216,10 +244,10 @@
 
         function handleStageWaves(sec) {
             if (currentStage === 7) {
-                if (sec === 1) spawnEnemy("メェーラム");
+                if (sec === 1) spawnEnemy("メェーラム敵");
                 if (sec === 2 || sec % 10 === 0) spawnEnemy("ハト助");
                 if (sec === 10) spawnEnemy("フクロウ教授");
-                if (sec % 15 === 0) spawnEnemy("メェーラム");
+                if (sec % 15 === 0) spawnEnemy("メェーラム敵");
             } else if (currentStage === 6) {
                 if (sec > 5) {
                     if (sec % 3 === 0) spawnEnemy("守護騎士");
@@ -284,9 +312,9 @@
                 ctx.fillText(m.icon, m.x, 340);
             });
 
-            // 敵ユニットの更新・描画（スズメバチの飛び道具無効スキル判定）
+            // 敵ユニットの更新・描画（タンクムーンのダメージ軽減・スズメバチの飛び道具無効スキル判定）
             activeHeroes.forEach((h, i) => {
-                if (h.name === "メェーラム") {
+                if (h.name === "メェーラム敵") {
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
                     if (target) {
                         effects.push({ x: h.x, y: 340, t: "✨", life: 15 });
@@ -304,10 +332,19 @@
                     });
                     if (target) { 
                         if (Math.random() < 0.06) { 
-                            // 敵が「弓使い」などの飛び道具持ちで、ターゲットが「スズメバチ」かつスキルを持っている場合
+                            // 1. スズメバチの飛び道具無効スキル
                             if (h.isProjectile && target.name === "スズメバチ" && target.skill) {
-                                effects.push({ x: target.x, y: 340, t: "🛡️", life: 15 }); // ガードエフェクト
-                            } else {
+                                effects.push({ x: target.x, y: 340, t: "🛡️", life: 15 }); 
+                            } 
+                            // 2. タンクムーンの高速敵ダメージ軽減スキル（速度2.0以上の敵からのダメージ40%軽減）
+                            else if (target.name === "タンクムーン" && h.speed >= 2.0) {
+                                let reducedAtk = h.atk * 0.6; // 40%軽減（残り60%）
+                                projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
+                                target.hp -= reducedAtk;
+                                effects.push({ x: target.x, y: 340, t: "🛡️", life: 10 });
+                            } 
+                            // 通常ダメージ
+                            else {
                                 projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
                                 target.hp -= h.atk; 
                             }
@@ -365,7 +402,7 @@
             currentStage = stageNum; 
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("battleScreen").classList.add("active"); 
-            document.getElementById("stageTitle").innerText = `ステージ ${stageNum}`; 
+            document.getElementById("stageTitle",).innerText = `ステージ ${stageNum}`; 
             money = 150; 
             playerCastleHP = 1000; 
             enemyCastleHP = (stageNum === 7) ? 8000 : 6000; 
@@ -375,7 +412,7 @@
             projectiles = []; 
             effects = []; 
             gameTimer = 0; 
-            coolDowns = [0, 0, 0, 0, 0]; 
+            coolDowns = [0, 0, 0, 0, 0, 0]; 
             document.getElementById("money").innerText = money; 
             initBattleUI(); 
             gameRunning = true; 
