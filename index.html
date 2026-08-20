@@ -107,7 +107,6 @@
             }
         }
 
-        // 背景画像の読み込み設定
         const bgImages = {
             "朝の森": new Image(),
             "夕方の森": new Image(),
@@ -442,7 +441,6 @@
                     if (sec % 7 === 0) spawnEnemy("弓使い");
                     break;
                 case 8:
-                    // ステージ8：クリスタルの洞窟
                     if (sec === 5) {
                         spawnEnemy("フクロウ教授");
                     }
@@ -455,7 +453,6 @@
                     }
                     break;
                 case 9:
-                    // ステージ9：WiFiモンキー
                     if (sec === 25) {
                         spawnEnemy("WiFiモンキー");
                     }
@@ -476,7 +473,6 @@
 
         function drawBackground(ctx, canvas) {
             if (currentStage === 8) {
-                // ステージ8専用：クリスタルの洞窟風背景
                 ctx.fillStyle = "#1b263b";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = "rgba(100, 200, 255, 0.15)";
@@ -494,17 +490,9 @@
             }
         }
 
-        // キャラクター（巨大化＋大きめの白背景円）
+        // キャラクター描画（白い丸の背景を削除し、直接アイコンを表示）
         function drawCharacter(ctx, icon, x, y) {
             ctx.save();
-            ctx.beginPath();
-            ctx.arc(x + 15, y - 20, 32, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
-            ctx.fill();
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = "#333";
-            ctx.stroke();
-
             ctx.font = "52px Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
@@ -521,7 +509,7 @@
             // 背景描画
             drawBackground(ctx, canvas);
 
-            // 城の表示（超巨大化！）
+            // 城の表示
             ctx.font = "80px Arial"; 
             ctx.textAlign = "left";
             ctx.textBaseline = "alphabetic";
