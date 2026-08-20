@@ -15,7 +15,9 @@
         .unit-btn.cd { border: 4px solid #ff0000 !important; color: #ff0000 !important; font-weight: bold; }
         .stage-btn { font-size: 16px; padding: 12px 20px; margin: 8px; background-color: #ff5722; color: white; }
         .up-btn { background-color: #4CAF50; color: white; padding: 6px 12px; font-size: 13px; }
+        .evolve-btn { background-color: #9c27b0; color: white; padding: 6px 12px; font-size: 13px; }
         .panel { background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; display: inline-block; margin: 5px; width: 95%; max-width: 500px; }
+        .inventory-panel { background: rgba(255, 255, 255, 0.08); padding: 8px; border-radius: 8px; display: inline-block; margin: 8px auto; width: 95%; max-width: 480px; text-align: left; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -28,6 +30,15 @@
             <p style="font-size: 18px;">所持XP: <span id="totalXp" style="color: #ffcc00; font-weight: bold;">0</span> XP</p>
             <button onclick="openPowerUpScreen()" style="background-color: #2196F3; color: white;">💪 パワーアップ画面</button>
         </div>
+        
+        <!-- 素材インベントリ -->
+        <div class="inventory-panel">
+            <div style="font-weight: bold; color: #ffcc00; margin-bottom: 4px;">🎒 素材インベントリ</div>
+            <div>⚔️ 攻撃力の心得: <span id="inv-atk">0</span>個</div>
+            <div>🛡️ 体力の心得: <span id="inv-hp">0</span>個</div>
+            <div>🐦 速度の心得: <span id="inv-spd">0</span>個</div>
+        </div>
+
         <hr style="width: 80%; border-color: #444; margin: 15px auto;">
         <h3>ステージを選んでね</h3>
         <div id="stageButtonsContainer"></div>
@@ -96,37 +107,63 @@
             }
         }
 
-        // セーブキーを元に戻して既存のデータが読み込めるように修正
         const SAVE_KEY = "monsterGameSave_v1";
-        let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true] };
+        let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { 
+            maxUnlockedStage: 1, 
+            xp: 0, 
+            levels: [1, 1, 1, 1, 1, 1], 
+            unlockedUnits: [true, true, true, false, true, true],
+            evolved: [false, false, false, false, false, false],
+            materials: { atk: 0, hp: 0, spd: 0 }
+        };
         
         function checkSaveDataIntegrity() { 
             if (!saveData.levels || saveData.levels.length < 6) saveData.levels = [1, 1, 1, 1, 1, 1]; 
             if (!saveData.unlockedUnits || saveData.unlockedUnits.length < 6) saveData.unlockedUnits = [true, true, true, false, true, true]; 
+            if (!saveData.evolved) saveData.evolved = [false, false, false, false, false, false];
+            if (!saveData.materials) saveData.materials = { atk: 0, hp: 0, spd: 0 };
         }
         checkSaveDataIntegrity();
         
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
         function unlockAllStages() { saveData.maxUnlockedStage = 7; saveData.unlockedUnits = [true, true, true, true, true, true]; saveGame(); initStageSelect(); }
-        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true] }; initStageSelect(); } }
+        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true], evolved: [false, false, false, false, false, false], materials: { atk: 0, hp: 0, spd: 0 } }; initStageSelect(); } }
 
         const monsters = [
-            { name: "スライム", icon: "🟢", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false, skill: null },
-            { name: "ゾンビ", icon: "🧟", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false, skill: null },
-            { name: "ボマー", icon: "💣", cost: 200, cd: 6.0, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true, skill: null },
-            { name: "タンクムーン", icon: "🌝", cost: 300, cd: 4.0, baseHp: 700, speed: 0.4, range: 40, baseAtk: 1, area: false, skill: { name: "高速敵ダメージ軽減", desc: "移動速度2.0以上の敵からのダメージを40%軽減" } },
-            { name: "スズメバチ", icon: "🐝", cost: 500, cd: 5.0, baseHp: 100, speed: 3.0, range: 150, baseAtk: 30, area: true, skill: { name: "飛び道具無効", desc: "弓使いなどの遠距離攻撃を完全に無効化する" } },
-            { name: "ドラゴン", icon: "🐉", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true, skill: null }
+            { 
+                name: "スライム", evolveName: "スクイーズ", icon: "🟢", evolveIcon: "🔵", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false, skill: null,
+                hasEvolve: true, evolveCostXp: 10000, evolveReq: { hp: 5 }
+            },
+            { 
+                name: "ゾンビ", evolveName: "ボス・ゾンビ", icon: "🧟", evolveIcon: "🧟‍♂️", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false, skill: null,
+                hasEvolve: true, evolveCostXp: 10000, evolveReq: { spd: 2, hp: 3 }
+            },
+            { 
+                name: "ボマー", evolveName: "ヌクレアスボマー", icon: "💣", evolveIcon: "💥", cost: 200, cd: 6.0, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true, skill: null,
+                hasEvolve: true, evolveCostXp: 10000, evolveReq: { atk: 10 }
+            },
+            { 
+                name: "タンクムーン", evolveName: "シャールサン", icon: "🌝", evolveIcon: "🌕", cost: 300, cd: 4.0, baseHp: 700, speed: 0.4, range: 40, baseAtk: 1, area: false, skill: { name: "高速敵ダメージ軽減", desc: "移動速度2.0以上の敵からのダメージを40%軽減" },
+                hasEvolve: true, evolveCostXp: 100000, evolveReq: { hp: 20 }
+            },
+            { 
+                name: "スズメバチ", evolveName: "オオスズメバチ", icon: "🐝", evolveIcon: "🐝", cost: 500, cd: 5.0, baseHp: 100, speed: 3.0, range: 150, baseAtk: 30, area: true, skill: { name: "飛び道具無効", desc: "弓使いなどの遠距離攻撃を完全に無効化する" },
+                hasEvolve: true, evolveCostXp: 100000, evolveReq: { spd: 20 }
+            },
+            { 
+                name: "ドラゴン", evolveName: "ヒドラゴラゴン", icon: "🐉", evolveIcon: "🐲", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true, skill: null,
+                hasEvolve: true, evolveCostXp: 350000, evolveReq: { hp: 20, atk: 20, spd: 20 }
+            }
         ];
         
         const enemyTemplates = {
-            "戦士": { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10, isProjectile: false },
-            "弓使い": { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8, isProjectile: true },
-            "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15, isProjectile: false },
-            "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24, isProjectile: false },
-            "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false, isBoss: true },
-            "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 99999, speed: 4.3, range: 45, atk: 5000, isProjectile: false, isBoss: true },
-            "WiFiモンキー": { name: "WiFiモンキー", icon: "🛜🐒", hp: 5000, speed: 1.7, range: 50, atk: 9999, isProjectile: false, isBoss: true }
+            "戦士": { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10, isProjectile: false, drop: "atk", dropRate: 0.03 },
+            "弓使い": { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8, isProjectile: true, drop: null, dropRate: 0 },
+            "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15, isProjectile: false, drop: "hp", dropRate: 0.03 },
+            "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24, isProjectile: false, drop: "spd", dropRate: 0.03 },
+            "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false, isBoss: true, drop: null, dropRate: 0 },
+            "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 99999, speed: 4.3, range: 45, atk: 5000, isProjectile: false, isBoss: true, drop: null, dropRate: 0 },
+            "WiFiモンキー": { name: "WiFiモンキー", icon: "🛜🐒", hp: 5000, speed: 1.7, range: 50, atk: 9999, isProjectile: false, isBoss: true, drop: null, dropRate: 0 }
         };
 
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
@@ -138,10 +175,11 @@
                 if (!saveData.unlockedUnits[i]) return;
                 let btn = document.getElementById("btn-" + i);
                 if (!btn) return;
+                let currentIcon = saveData.evolved[i] ? m.evolveIcon : m.icon;
                 if (coolDowns[i] > 0) { 
                     coolDowns[i] = Math.max(0, coolDowns[i] - 0.1); 
                     btn.classList.add("cd"); 
-                    btn.innerHTML = `<span style="font-size:18px;">${m.icon}</span><br><span style="font-size:11px; font-weight:bold;">${Math.ceil(coolDowns[i])}秒</span>`; 
+                    btn.innerHTML = `<span style="font-size:18px;">${currentIcon}</span><br><span style="font-size:11px; font-weight:bold;">${Math.ceil(coolDowns[i])}秒</span>`; 
                 } else if (btn.classList.contains("cd")) { 
                     btn.classList.remove("cd"); 
                     updateUnitBtnDisplay(i, btn); 
@@ -153,11 +191,17 @@
             checkSaveDataIntegrity(); 
             let m = monsters[i]; 
             let lvl = saveData.levels[i] || 1; 
-            btn.innerHTML = `<span style="font-size:18px;">${m.icon}</span><br><span style="font-size:10px;">Lv${lvl}</span><br><span style="font-size:9px; color:#ffcc00;">${m.cost}円</span>`; 
+            let currentIcon = saveData.evolved[i] ? m.evolveIcon : m.icon;
+            let currentName = saveData.evolved[i] ? m.evolveName : m.name;
+            btn.innerHTML = `<span style="font-size:18px;">${currentIcon}</span><br><span style="font-size:10px;">${saveData.evolved[i] ? '進化済' : 'Lv'+lvl}</span><br><span style="font-size:9px; color:#ffcc00;">${m.cost}円</span>`; 
         }
 
         function initStageSelect() { 
             document.getElementById("totalXp").innerText = saveData.xp; 
+            document.getElementById("inv-atk").innerText = saveData.materials.atk;
+            document.getElementById("inv-hp").innerText = saveData.materials.hp;
+            document.getElementById("inv-spd").innerText = saveData.materials.spd;
+
             const container = document.getElementById("stageButtonsContainer"); 
             container.innerHTML = ""; 
             for(let i = 1; i <= 7; i++) { 
@@ -181,6 +225,7 @@
             monsters.forEach((m, i) => { 
                 let isUnlocked = saveData.unlockedUnits[i];
                 let lvl = saveData.levels[i] || 1; 
+                let isEvolved = saveData.evolved[i];
                 let div = document.createElement("div"); 
                 div.style.cssText = "background: rgba(255,255,255,0.05); padding: 10px; margin: 6px auto; max-width: 400px; border-radius: 8px; text-align: left;"; 
                 
@@ -188,6 +233,9 @@
                 if (m.skill) {
                     skillHtml = `<div style="font-size: 12px; color: #ffcc00; margin-top: 4px;">✨スキル: ${m.skill.name} - ${m.skill.desc}</div>`;
                 }
+
+                let currentName = isEvolved ? m.evolveName : m.name;
+                let currentIcon = isEvolved ? m.evolveIcon : m.icon;
 
                 if (!isUnlocked) {
                     div.innerHTML = `
@@ -197,12 +245,37 @@
                         </div>
                         ${skillHtml}
                     `;
-                } else {
-                    let cost = lvl * 100;
+                } else if (isEvolved) {
                     div.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size:15px; font-weight: bold;">${m.icon} ${m.name} (Lv:${lvl}/10)</span>
-                            <button class="up-btn" onclick="upgradeUnit(${i})" ${lvl >= 10 ? "disabled style='background:#555;'" : ""}>${lvl >= 10 ? "MAX" : `強化(${cost}XP)`}</button>
+                            <span style="font-size:15px; font-weight: bold; color: #ff4081;">✨ ${currentIcon} ${currentName} (進化済みMAX)</span>
+                            <span style="font-size: 13px; color: #ffcc00; font-weight: bold;">MAX</span>
+                        </div>
+                        ${skillHtml}
+                    `;
+                } else {
+                    let cost = lvl * 100;
+                    let canEvolve = (lvl >= 10 && m.hasEvolve);
+                    
+                    let evolveText = "";
+                    if (lvl >= 10 && m.hasEvolve) {
+                        evolveText = `<span style="font-size: 11px; color: #00e676; margin-left: 6px;">第2形態あり</span>`;
+                    }
+
+                    let rightButtonHtml = "";
+                    if (canEvolve) {
+                        rightButtonHtml = `<button class="evolve-btn" onclick="evolveUnit(${i})">進化</button>`;
+                    } else {
+                        rightButtonHtml = `<button class="up-btn" onclick="upgradeUnit(${i})" ${lvl >= 10 ? "disabled style='background:#555;'" : ""}>${lvl >= 10 ? "MAX" : `強化(${cost}XP)`}</button>`;
+                    }
+
+                    div.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-size:15px; font-weight: bold;">${currentIcon} ${currentName} (Lv:${lvl}/10)</span>
+                                ${evolveText}
+                            </div>
+                            ${rightButtonHtml}
                         </div>
                         ${skillHtml}
                     `;
@@ -244,6 +317,40 @@
             }
         }
 
+        function evolveUnit(index) {
+            let m = monsters[index];
+            let req = m.evolveReq;
+            
+            // 素材とXPのチェック
+            if (saveData.xp < m.evolveCostXp) {
+                alert(`XPが足りません！（${m.evolveCostXp}XP必要です）`);
+                return;
+            }
+            if (req.hp && saveData.materials.hp < req.hp) {
+                alert(`体力の心得が足りません！（必要: ${req.hp}個）`);
+                return;
+            }
+            if (req.atk && saveData.materials.atk < req.atk) {
+                alert(`攻撃力の心得が足りません！（必要: ${req.atk}個）`);
+                return;
+            }
+            if (req.spd && saveData.materials.spd < req.spd) {
+                alert(`速度の心得が足りません！（必要: ${req.spd}個）`);
+                return;
+            }
+
+            // 消費
+            saveData.xp -= m.evolveCostXp;
+            if (req.hp) saveData.materials.hp -= req.hp;
+            if (req.atk) saveData.materials.atk -= req.atk;
+            if (req.spd) saveData.materials.spd -= req.spd;
+
+            saveData.evolved[index] = true;
+            saveGame();
+            alert(`おめでとう！ ${m.name} が ${m.evolveName} に進化しました！🎉`);
+            openPowerUpScreen();
+        }
+
         function initBattleUI() { 
             checkSaveDataIntegrity(); 
             const container = document.getElementById("unitButtons"); 
@@ -271,7 +378,21 @@
 
                 let lvl = saveData.levels[index] || 1; 
                 let multiplier = 1 + (lvl - 1) * 0.15; 
-                activeMonsters.push({ ...m, hp: m.baseHp * multiplier, maxHp: m.baseHp * multiplier, atk: m.baseAtk * multiplier, x: 70 }); 
+                let hp = m.baseHp * multiplier;
+                let atk = m.baseAtk * multiplier;
+                let speed = m.speed;
+
+                // 第2形態のステータス補正
+                if (saveData.evolved[index]) {
+                    if (index === 0) { hp *= 3; } // スクイーズ
+                    else if (index === 1) { hp *= 2; speed *= 1.75; } // ボス・ゾンビ
+                    else if (index === 2) { atk *= 5; } // ヌクレアスボマー
+                    else if (index === 3) { hp *= 7.5; } // シャールサン
+                    else if (index === 4) { speed *= 30; } // オオスズメバチ
+                    else if (index === 5) { hp *= 7.5; atk *= 7.5; speed *= 7.5; } // ヒドラゴラゴン
+                }
+
+                activeMonsters.push({ ...m, hp: hp, maxHp: hp, atk: atk, speed: speed, x: 70, evolved: saveData.evolved[index] }); 
             } 
         }
 
@@ -333,6 +454,7 @@
 
             activeMonsters.forEach((m) => {
                 let target = activeHeroes.find(h => Math.abs(h.x - m.x) < m.range);
+                let currentIcon = m.evolved ? m.evolveIcon : m.icon;
                 if (target) {
                     if (m.name === "ボマー") { 
                         effects.push({ x: m.x, y: 340, t: "💥", life: 15 }); 
@@ -348,7 +470,7 @@
                     enemyCastleHP -= 0.6;
                 }
                 ctx.font = "35px Arial"; 
-                ctx.fillText(m.icon, m.x, 340);
+                ctx.fillText(currentIcon, m.x, 340);
             });
 
             let initialEnemyCount = activeHeroes.length;
@@ -393,9 +515,21 @@
                 ctx.fillText(h.icon, h.x, 340);
             });
 
+            // 敵が倒された時の素材ドロップ判定
+            activeHeroes.forEach(h => {
+                if (h.hp <= 0 && h.drop && h.dropRate) {
+                    if (Math.random() < h.dropRate) {
+                        saveData.materials[h.drop]++;
+                        saveGame();
+                        let dropName = h.drop === "atk" ? "攻撃力の心得" : h.drop === "hp" ? "体力の心得" : "速度の心得";
+                        effects.push({ x: h.x, y: 300, t: `✨${dropName}GET!`, life: 30 });
+                    }
+                }
+            });
+
             activeMonsters = activeMonsters.filter(m => m.hp > 0);
-            
             activeHeroes = activeHeroes.filter(h => h.hp > 0);
+            
             if (activeHeroes.length < initialEnemyCount) {
                 playSound("defeat"); 
             }
@@ -408,7 +542,7 @@
             projectiles = projectiles.filter(p => Math.abs(p.x - p.targetX) > 10);
 
             effects.forEach(e => {
-                ctx.font = "30px Arial";
+                ctx.font = "20px Arial";
                 ctx.fillText(e.t, e.x, e.y - 20);
                 e.life--;
             });
@@ -440,7 +574,6 @@
             currentStage = stageNum; 
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("battleScreen").classList.add("active"); 
-            document.getElementById("stageTitle", `ステージ ${stageNum}`); 
             document.getElementById("stageTitle").innerText = `ステージ ${stageNum}`; 
             money = 150; 
             playerCastleHP = 1000; 
