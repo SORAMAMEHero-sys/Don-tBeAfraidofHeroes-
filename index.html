@@ -125,7 +125,7 @@
             "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24, isProjectile: false },
             "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false, isBoss: true },
             "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 99999, speed: 4.3, range: 45, atk: 5000, isProjectile: false, isBoss: true },
-            "WiFiモンキー": { name: "WiFiモンキー", icon: "🛜🐒", hp: 5000, speed: 1.7, range: 40, atk: 9999, isProjectile: false, isBoss: true }
+            "WiFiモンキー": { name: "WiFiモンキー", icon: "🛜🐒", hp: 5000, speed: 1.7, range: 50, atk: 9999, isProjectile: false, isBoss: true }
         };
 
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
@@ -284,7 +284,6 @@
 
         function handleStageWaves(sec) {
             if (currentStage === 7) {
-                if (sec === 1) spawnEnemy("WiFiモンキー"); // ステージ7の目玉として登場！
                 if (sec === 2 || sec % 10 === 0) spawnEnemy("ハト助");
                 if (sec === 10) spawnEnemy("フクロウ教授");
                 if (sec % 15 === 0) spawnEnemy("メェーラム敵");
@@ -359,7 +358,6 @@
                     if (target) {
                         effects.push({ x: h.x, y: 340, t: "💥", life: 15 });
                         target.hp -= h.atk;
-                        // 単体攻撃なのでターゲットだけを即死させる
                     } else if (h.x > 70) {
                         h.x -= h.speed;
                     } else {
@@ -404,7 +402,7 @@
             projectiles.forEach(p => {
                 ctx.fillStyle = p.col;
                 ctx.fillRect(p.x, 310, 6, 6);
-                p.x += (p.targetX > p.x ? 5 : -5);
+.x += (p.targetX > p.x ? 5 : -5);
             });
             projectiles = projectiles.filter(p => Math.abs(p.x - p.targetX) > 10);
 
