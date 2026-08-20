@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>モンスターズ・リベンジ：スマホ対応版</title>
+    <title>モンスターズ・リベンジ：アプデ版</title>
     <style>
         body { 
             text-align: center; 
@@ -36,7 +36,6 @@
             font-weight: bold; 
             margin: 6px; 
         }
-        /* 📱 スマホでも見やすいユニットボタンの改善 */
         .unit-btn { 
             width: 75px; 
             height: 75px; 
@@ -97,14 +96,14 @@
     <script>
         // ==========================================
         // 【⚠️ ここから下は基本システム（編集禁止エリア）】
-        // セーブキーを完全固定しているため、アプデしてもデータは消えません！
+        // セーブキーが固定されているため、データは消えません。
         // ==========================================
         const SAVE_KEY = "monsterGameSave_PERFECT_FIXED";
 
         let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { 
             maxUnlockedStage: 1, 
             xp: 0, 
-            levels: [1, 1, 1, 1] 
+            levels: [1, 1, 1, 1, 1] 
         };
 
         function saveGame() {
@@ -112,7 +111,7 @@
         }
 
         function unlockAllStages() {
-            saveData.maxUnlockedStage = 3;
+            saveData.maxUnlockedStage = 5;
             saveGame();
             initStageSelect();
             alert("すべてのステージが解放されました！");
@@ -121,7 +120,7 @@
         function resetSaveData() {
             if (confirm("セーブデータを初期化しますか？")) {
                 localStorage.removeItem(SAVE_KEY);
-                saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1] };
+                saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1] };
                 initStageSelect();
                 alert("セーブデータを初期化しました！");
             }
@@ -133,20 +132,25 @@
 
         // ==========================================
         // 【✨ ここから下はパラメータ・カスタマイズ自由エリア】
-        // キャラクターの強さや値段などを自由にいじれます！
         // ==========================================
+        
+        // 味方モンスター定義（スズメバチ追加）
         const monsters = [
             { name: "スライム", icon: "🟢", cost: 50, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false },
             { name: "ゾンビ", icon: "🧟", cost: 120, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false },
             { name: "ボマー", icon: "💣", cost: 200, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true },
-            { name: "ドラゴン", icon: "🐉", cost: 3000, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true }
+            { name: "ドラゴン", icon: "🐉", cost: 3000, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true },
+            { name: "スズメバチ", icon: "🐝", cost: 500, baseHp: 1, speed: 3.0, range: 150, baseAtk: 30, area: true }
         ];
         
-        const heroes = [
-            { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10 },
-            { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8 },
-            { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15 }
-        ];
+        // 敵キャラクター定義（ハト助、フクロウ教授追加、自動スケーリング廃止）
+        const enemyTemplates = {
+            "戦士": { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10 },
+            "弓使い": { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8 },
+            "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15 },
+            "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24 },
+            "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30 }
+        };
         // ==========================================
         // 【✨ カスタマイズエリアここまで】
         // ==========================================
@@ -157,12 +161,14 @@
         let gameRunning = false;
         let activeMonsters = [], activeHeroes = [], projectiles = [], effects = [];
         let currentStage = 1, gameLoopId = null;
+        let gameTimer = 0; // バトル経過時間（秒）カウント用
+        let stageTimerInterval = null;
 
         function initStageSelect() {
             document.getElementById("totalXp").innerText = saveData.xp;
             const container = document.getElementById("stageButtonsContainer");
             container.innerHTML = "";
-            for(let i = 1; i <= 3; i++) {
+            for(let i = 1; i <= 5; i++) {
                 let b = document.createElement("button");
                 b.className = "stage-btn";
                 let reward = i * 200;
@@ -181,7 +187,7 @@
             const list = document.getElementById("powerUpList");
             list.innerHTML = "";
             monsters.forEach((m, i) => {
-                let lvl = saveData.levels[i];
+                let lvl = saveData.levels[i] || 1;
                 let cost = lvl * 100;
                 let div = document.createElement("div");
                 div.style.cssText = "background: rgba(255,255,255,0.05); padding: 10px; margin: 8px auto; max-width: 400px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;";
@@ -202,6 +208,7 @@
         }
 
         function upgradeUnit(index) {
+            if(!saveData.levels) saveData.levels = [1,1,1,1,1];
             let lvl = saveData.levels[index];
             let cost = lvl * 100;
             if (lvl < 10 && saveData.xp >= cost) {
@@ -217,13 +224,13 @@
         }
 
         function initBattleUI() {
+            if(!saveData.levels) saveData.levels = [1,1,1,1,1];
             const container = document.getElementById("unitButtons");
             container.innerHTML = "";
             monsters.forEach((m, i) => {
-                let lvl = saveData.levels[i];
+                let lvl = saveData.levels[i] || 1;
                 let btn = document.createElement("button");
                 btn.className = "unit-btn";
-                // 📱 文字が綺麗に収まるようにHTML構造を調整
                 btn.innerHTML = `<span style="font-size:20px;">${m.icon}</span><br><span style="font-size:11px;">Lv${lvl}</span><br><span style="font-size:10px; color:#ffcc00;">${m.cost}円</span>`;
                 btn.onclick = () => spawnMonster(i);
                 container.appendChild(btn);
@@ -236,7 +243,7 @@
                 money -= m.cost;
                 document.getElementById("money").innerText = money;
                 
-                let lvl = saveData.levels[index];
+                let lvl = saveData.levels[index] || 1;
                 let multiplier = 1 + (lvl - 1) * 0.15;
                 
                 activeMonsters.push({ 
@@ -249,13 +256,38 @@
             }
         }
 
-        setInterval(() => {
-            if (!gameRunning) return;
-            let template = heroes[Math.floor(Math.random() * heroes.length)];
-            let scaledHp = template.hp + (currentStage * 25);
-            activeHeroes.push({ ...template, x: 730, hp: scaledHp, maxHp: scaledHp });
-        }, 2800);
+        function spawnEnemy(key) {
+            let template = enemyTemplates[key];
+            if(template) {
+                activeHeroes.push({ ...template, x: 730, hp: template.hp, maxHp: template.hp });
+            }
+        }
 
+        // ステージごとの敵出現ウェーブ制御
+        function handleStageWaves(sec) {
+            if (currentStage === 1) {
+                if (sec % 3 === 0) spawnEnemy("戦士");
+            } else if (currentStage === 2) {
+                if (sec % 4 === 0) spawnEnemy("戦士");
+                if (sec % 7 === 0) spawnEnemy("弓使い");
+            } else if (currentStage === 3) {
+                if (sec % 3 === 0) spawnEnemy("戦士");
+                if (sec % 6 === 0) spawnEnemy("弓使い");
+                if (sec % 10 === 0) spawnEnemy("守護騎士");
+            } else if (currentStage === 4) {
+                // ステージ4のルール
+                if (sec === 3) spawnEnemy("ハト助");
+                if (sec > 0 && sec % 5 === 0) spawnEnemy("守護騎士");
+                if (sec > 0 && sec % 12 === 0) spawnEnemy("戦士");
+                if (sec > 0 && sec % 20 === 0) spawnEnemy("弓使い");
+            } else if (currentStage === 5) {
+                // ステージ5 (BOSS) のルール
+                if (sec === 6) spawnEnemy("フクロウ教授");
+                if (sec === 8 || (sec > 0 && sec % 20 === 0)) spawnEnemy("ハト助");
+            }
+        }
+
+        // お金自動増加
         setInterval(() => {
             if (!gameRunning) return;
             if (money < 9999) {
@@ -308,7 +340,11 @@
             });
 
             activeHeroes.forEach((h, i) => {
-                let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
+                let target = activeMonsters.find(m => {
+                    // ボマー移動中は敵の索外（無敵）にする
+                    if (m.name === "ボマー") return false;
+                    return Math.abs(m.x - h.x) < h.range;
+                });
                 
                 if (target) {
                     if (Math.random() < 0.06) {
@@ -341,6 +377,7 @@
                 if (ef.life <= 0) effects.splice(i, 1);
             });
 
+            // 敵を倒したときに300円ドロップする処理
             activeMonsters = activeMonsters.filter(m => {
                 if (m.hp <= 0) {
                     effects.push({ x: m.x, y: 340, t: "💀", life: 15 });
@@ -352,6 +389,9 @@
             activeHeroes = activeHeroes.filter(h => {
                 if (h.hp <= 0) {
                     effects.push({ x: h.x, y: 340, t: "💀", life: 15 });
+                    money += 300; // 敵撃破時に300円獲得！
+                    if (money > 9999) money = 9999;
+                    document.getElementById("money").innerText = money;
                     return false;
                 }
                 return true;
@@ -360,13 +400,14 @@
             if (playerCastleHP <= 0 || enemyCastleHP <= 0) {
                 gameRunning = false;
                 cancelAnimationFrame(gameLoopId);
+                clearInterval(stageTimerInterval);
                 
                 if (enemyCastleHP <= 0) {
                     let rewardXp = currentStage * 200;
                     saveData.xp += rewardXp;
                     alert(`🎉 ステージ ${currentStage} クリア！！\n報酬として ${rewardXp} XP 獲得！`);
                     
-                    if (currentStage === saveData.maxUnlockedStage && currentStage < 3) {
+                    if (currentStage === saveData.maxUnlockedStage && currentStage < 5) {
                         saveData.maxUnlockedStage++;
                     }
                     saveGame();
@@ -389,23 +430,36 @@
             
             money = 150;
             playerCastleHP = 1000; maxPlayerCastleHP = 1000;
-            enemyCastleHP = 800 + (stageNum * 500); maxEnemyCastleHP = enemyCastleHP;
+            // ステージ5はボス用に敵城HPをガッツリ強化
+            enemyCastleHP = stageNum === 5 ? 4000 : (800 + (stageNum * 500)); 
+            maxEnemyCastleHP = enemyCastleHP;
             
             activeMonsters = [];
             activeHeroes = [];
             projectiles = [];
             effects = [];
+            gameTimer = 0;
             
             document.getElementById("money").innerText = money;
             initBattleUI();
             
             gameRunning = true;
+            
+            // 1秒ごとにタイマーを進めてウェーブを管理
+            if(stageTimerInterval) clearInterval(stageTimerInterval);
+            stageTimerInterval = setInterval(() => {
+                if(!gameRunning) return;
+                gameTimer++;
+                handleStageWaves(gameTimer);
+            }, 1000);
+
             updateGame();
         }
 
         function returnToMap() {
             gameRunning = false;
             cancelAnimationFrame(gameLoopId);
+            if(stageTimerInterval) clearInterval(stageTimerInterval);
             document.getElementById("battleScreen").classList.remove("active");
             document.getElementById("powerUpScreen").classList.remove("active");
             document.getElementById("stageSelectScreen").classList.add("active");
