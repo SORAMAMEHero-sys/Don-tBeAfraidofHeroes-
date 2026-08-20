@@ -119,13 +119,11 @@
         bgImages["夜の森"].src = "IMG_2437.jpeg";
         bgImages["ビーチ"].src = "IMG_2439.jpeg";
 
-        let bgOffset = 0;
-
         function getBgImageByStage(stage) {
             if (stage <= 2) return bgImages["朝の森"];
             if (stage <= 4) return bgImages["夕方の森"];
             if (stage === 5) return bgImages["夜の森"];
-            return bgImages["ビーチ"]; // ステージ6, 7
+            return bgImages["ビーチ"];
         }
 
         const SAVE_KEY = "monsterGameSave_v1";
@@ -448,7 +446,6 @@
                     if (sec % 10 === 0) spawnEnemy("ハト助");
                     if (sec === 20) spawnEnemy("フクロウ教授");
                     
-                    // 100秒以降は無限メェーラムラッシュ
                     if (sec >= 100 && sec % 3 === 0) {
                         spawnEnemy("メェーラム敵");
                     }
@@ -466,12 +463,8 @@
 
         function drawBackground(ctx, canvas) {
             let img = getBgImageByStage(currentStage);
-            bgOffset -= 0.5; 
-            if (bgOffset <= -canvas.width) bgOffset = 0;
-
             if (img && img.complete && img.naturalWidth !== 0) {
-                ctx.drawImage(img, bgOffset, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, bgOffset + canvas.width, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             } else {
                 ctx.fillStyle = "#333";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -484,24 +477,28 @@
             const ctx = canvas.getContext("2d"); 
             ctx.clearRect(0, 0, 800, 400);
 
+            // 背景描画（固定・1枚絵フィット）
             drawBackground(ctx, canvas);
 
-            ctx.font = "50px Arial"; 
-            ctx.fillText("🏰", 15, 340); 
-            ctx.fillText("👑", 735, 340);
+            // 城の表示（少し大きく見やすく）
+            ctx.font = "45px Arial"; 
+            ctx.fillText("🏰", 15, 335); 
+            ctx.fillText("👑", 735, 335);
 
+            // 体力バー
             const bw = 80, bh = 8; 
             ctx.fillStyle = "#555"; ctx.fillRect(15, 260, bw, bh); 
             ctx.fillStyle = "#2ecc71"; ctx.fillRect(15, 260, bw * Math.max(0, playerCastleHP / maxPlayerCastleHP), bh); 
             ctx.fillStyle = "#555"; ctx.fillRect(715, 260, bw, bh); 
             ctx.fillStyle = "#e74c3c"; ctx.fillRect(715, 260, bw * Math.max(0, enemyCastleHP / maxEnemyCastleHP), bh);
 
+            // 味方モンスター描画（文字サイズを40pxにして見やすく！）
             activeMonsters.forEach((m) => {
                 let target = activeHeroes.find(h => Math.abs(h.x - m.x) < m.range);
                 let currentIcon = m.evolved ? m.evolveIcon : m.icon;
                 if (target) {
                     if (m.name === "ボマー") { 
-                        effects.push({ x: m.x, y: 340, t: "💥", life: 15 }); 
+                        effects.push({ x: m.x, y: 330, t: "💥", life: 15 }); 
                         activeHeroes.forEach(h => { if (Math.abs(h.x - m.x) < 120) h.hp -= m.atk; }); 
                         m.hp = 0; 
                     } else if (Math.random() < 0.06) { 
@@ -513,19 +510,18 @@
                 } else {
                     enemyCastleHP -= 0.6;
                 }
-                ctx.font = "35px Arial"; 
-                ctx.fillText(currentIcon, m.x, 340);
+                ctx.font = "40px Arial"; 
+                ctx.fillText(currentIcon, m.x, 335);
             });
 
             let initialEnemyCount = activeHeroes.length;
 
+            // 敵キャラクター描画（文字サイズを40pxにして見やすく！）
             activeHeroes.forEach((h) => {
                 if (h.area) {
-                    // 範囲攻撃を持つ敵（メェーラムなど）の処理
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
                     if (target) {
-                        effects.push({ x: h.x, y: 340, t: "💥", life: 15 });
-                        // 周囲の味方ユニットすべてにダメージ
+                        effects.push({ x: h.x, y: 330, t: "💥", life: 15 });
                         activeMonsters.forEach(m => {
                             if (Math.abs(m.x - h.x) < 100) {
                                 m.hp -= h.atk;
@@ -534,7 +530,7 @@
                     } else if (h.x > 70) {
                         h.x -= h.speed;
                     } else {
-                        playerCastleHP -= 5.0; // 城への大ダメージ
+                        playerCastleHP -= 5.0;
                     }
                 } else {
                     let target = activeMonsters.find(m => { 
@@ -544,12 +540,12 @@
                     if (target) { 
                         if (Math.random() < 0.06) { 
                             if (h.isProjectile && target.name === "スズメバチ" && target.skill) {
-                                effects.push({ x: target.x, y: 340, t: "🛡️", life: 15 }); 
+                                effects.push({ x: target.x, y: 330, t: "🛡️", life: 15 }); 
                             } else if (target.name === "タンクムーン" && h.speed >= 2.0) {
                                 let reducedAtk = h.atk * 0.6; 
                                 projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
                                 target.hp -= reducedAtk;
-                                effects.push({ x: target.x, y: 340, t: "🛡️", life: 10 });
+                                effects.push({ x: target.x, y: 330, t: "🛡️", life: 10 });
                             } else {
                                 projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
                                 target.hp -= h.atk; 
@@ -561,8 +557,8 @@
                         playerCastleHP -= 0.6;
                     }
                 }
-                ctx.font = "35px Arial"; 
-                ctx.fillText(h.icon, h.x, 340);
+                ctx.font = "40px Arial"; 
+                ctx.fillText(h.icon, h.x, 335);
             });
 
             activeHeroes.forEach(h => {
@@ -571,7 +567,7 @@
                         saveData.materials[h.drop]++;
                         saveGame();
                         let dropName = h.drop === "atk" ? "攻撃力の心得" : h.drop === "hp" ? "体力の心得" : "速度の心得";
-                        effects.push({ x: h.x, y: 300, t: `✨${dropName}GET!`, life: 30 });
+                        effects.push({ x: h.x, y: 290, t: `✨${dropName}GET!`, life: 30 });
                     }
                 }
             });
@@ -585,7 +581,7 @@
 
             projectiles.forEach(p => {
                 ctx.fillStyle = p.col;
-                ctx.fillRect(p.x, 310, 6, 6);
+                ctx.fillRect(p.x, 305, 6, 6);
                 p.x += (p.targetX > p.x ? 5 : -5);
             });
             projectiles = projectiles.filter(p => Math.abs(p.x - p.targetX) > 10);
