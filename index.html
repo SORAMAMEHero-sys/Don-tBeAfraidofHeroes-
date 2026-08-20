@@ -7,7 +7,7 @@
     <style>
         body { text-align: center; background-color: #1a1a1a; color: #ffffff; font-family: sans-serif; touch-action: manipulation; margin: 0; padding: 10px; }
         h1 { color: #ffcc00; font-size: 22px; margin: 10px 0; }
-        canvas { border: 4px solid #fff; background: linear-gradient(to bottom, #87CEEB 60%, #8B4513 40%); width: 100%; max-width: 800px; height: 350px; display: block; margin: 0 auto; }
+        canvas { border: 4px solid #fff; background: #333; width: 100%; max-width: 800px; height: 350px; display: block; margin: 0 auto; }
         .screen { display: none; }
         .screen.active { display: block; }
         button { font-size: 16px; padding: 10px 18px; cursor: pointer; background-color: #ffcc00; border: none; border-radius: 8px; font-weight: bold; margin: 6px; }
@@ -107,6 +107,27 @@
             }
         }
 
+        // 背景画像の読み込み設定
+        const bgImages = {
+            "朝の森": new Image(),
+            "夕方の森": new Image(),
+            "夜の森": new Image(),
+            "ビーチ": new Image()
+        };
+        bgImages["朝の森"].src = "IMG_2435.jpeg";
+        bgImages["夕方の森"].src = "IMG_2436.jpeg";
+        bgImages["夜の森"].src = "IMG_2437.jpeg";
+        bgImages["ビーチ"].src = "IMG_2439.jpeg";
+
+        let bgOffset = 0;
+
+        function getBgImageByStage(stage) {
+            if (stage <= 2) return bgImages["朝の森"];
+            if (stage <= 4) return bgImages["夕方の森"];
+            if (stage === 5) return bgImages["夜の森"];
+            return bgImages["ビーチ"]; // ステージ6, 7
+        }
+
         const SAVE_KEY = "monsterGameSave_v1";
         let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { 
             maxUnlockedStage: 1, 
@@ -157,13 +178,12 @@
         ];
         
         const enemyTemplates = {
-            "戦士": { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10, isProjectile: false, drop: "atk", dropRate: 0.03 },
-            "弓使い": { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8, isProjectile: true, drop: null, dropRate: 0 },
-            "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15, isProjectile: false, drop: "hp", dropRate: 0.03 },
-            "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24, isProjectile: false, drop: "spd", dropRate: 0.03 },
-            "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false, isBoss: true, drop: null, dropRate: 0 },
-            "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 99999, speed: 4.3, range: 45, atk: 5000, isProjectile: false, isBoss: true, drop: null, dropRate: 0 },
-            "WiFiモンキー": { name: "WiFiモンキー", icon: "🛜🐒", hp: 5000, speed: 1.7, range: 50, atk: 9999, isProjectile: false, isBoss: true, drop: null, dropRate: 0 }
+            "戦士": { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10, isProjectile: false, drop: "atk", dropRate: 0.03, area: false },
+            "弓使い": { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8, isProjectile: true, drop: null, dropRate: 0, area: false },
+            "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15, isProjectile: false, drop: "hp", dropRate: 0.03, area: false },
+            "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24, isProjectile: false, drop: "spd", dropRate: 0.03, area: false },
+            "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false },
+            "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 999999, speed: 2.5, range: 50, atk: 999999, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: true }
         };
 
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
@@ -192,7 +212,6 @@
             let m = monsters[i]; 
             let lvl = saveData.levels[i] || 1; 
             let currentIcon = saveData.evolved[i] ? m.evolveIcon : m.icon;
-            let currentName = saveData.evolved[i] ? m.evolveName : m.name;
             btn.innerHTML = `<span style="font-size:18px;">${currentIcon}</span><br><span style="font-size:10px;">${saveData.evolved[i] ? '進化済' : 'Lv'+lvl}</span><br><span style="font-size:9px; color:#ffcc00;">${m.cost}円</span>`; 
         }
 
@@ -321,7 +340,6 @@
             let m = monsters[index];
             let req = m.evolveReq;
             
-            // 素材とXPのチェック
             if (saveData.xp < m.evolveCostXp) {
                 alert(`XPが足りません！（${m.evolveCostXp}XP必要です）`);
                 return;
@@ -339,7 +357,6 @@
                 return;
             }
 
-            // 消費
             saveData.xp -= m.evolveCostXp;
             if (req.hp) saveData.materials.hp -= req.hp;
             if (req.atk) saveData.materials.atk -= req.atk;
@@ -382,14 +399,13 @@
                 let atk = m.baseAtk * multiplier;
                 let speed = m.speed;
 
-                // 第2形態のステータス補正
                 if (saveData.evolved[index]) {
-                    if (index === 0) { hp *= 3; } // スクイーズ
-                    else if (index === 1) { hp *= 2; speed *= 1.75; } // ボス・ゾンビ
-                    else if (index === 2) { atk *= 5; } // ヌクレアスボマー
-                    else if (index === 3) { hp *= 7.5; } // シャールサン
-                    else if (index === 4) { speed *= 30; } // オオスズメバチ
-                    else if (index === 5) { hp *= 7.5; atk *= 7.5; speed *= 7.5; } // ヒドラゴラゴン
+                    if (index === 0) { hp *= 3; } 
+                    else if (index === 1) { hp *= 2; speed *= 1.75; } 
+                    else if (index === 2) { atk *= 5; } 
+                    else if (index === 3) { hp *= 7.5; } 
+                    else if (index === 4) { speed *= 30; } 
+                    else if (index === 5) { hp *= 7.5; atk *= 7.5; speed *= 7.5; } 
                 }
 
                 activeMonsters.push({ ...m, hp: hp, maxHp: hp, atk: atk, speed: speed, x: 70, evolved: saveData.evolved[index] }); 
@@ -405,26 +421,38 @@
         }
 
         function handleStageWaves(sec) {
-            if (currentStage === 7) {
-                if (sec === 2 || sec % 10 === 0) spawnEnemy("ハト助");
-                if (sec === 10) spawnEnemy("フクロウ教授");
-                if (sec % 15 === 0) spawnEnemy("メェーラム敵");
-            } else if (currentStage === 6) {
-                if (sec > 5) {
-                    if (sec % 3 === 0) spawnEnemy("守護騎士");
-                    if (sec % 5 === 0) spawnEnemy("弓使い");
-                }
-            } else if (currentStage === 5) { 
-                if (sec === 6) spawnEnemy("フクロウ教授"); 
-                if (sec === 8 || (sec > 0 && sec % 20 === 0)) spawnEnemy("ハト助"); 
-            } else if (currentStage === 4) {
-                if (sec % 4 === 0) spawnEnemy("弓使い");
-            } else if (currentStage === 3) {
-                if (sec % 5 === 0) spawnEnemy("守護騎士");
-            } else if (currentStage === 2) {
-                if (sec % 4 === 0) spawnEnemy("戦士");
-            } else if (currentStage === 1) {
-                if (sec % 5 === 0) spawnEnemy("戦士");
+            switch(currentStage) {
+                case 1:
+                case 2:
+                    if (sec % 5 === 0) spawnEnemy("戦士");
+                    if (currentStage === 2 && sec % 8 === 0) spawnEnemy("弓使い");
+                    break;
+                case 3:
+                case 4:
+                    if (sec % 5 === 0) spawnEnemy("守護騎士");
+                    if (currentStage === 4 && sec % 6 === 0) spawnEnemy("弓使い");
+                    break;
+                case 5:
+                    if (sec === 5) spawnEnemy("フクロウ教授");
+                    if (sec % 4 === 0) spawnEnemy("ハト助");
+                    break;
+                case 6:
+                    if (sec % 4 === 0) spawnEnemy("ハト助");
+                    if (sec % 5 === 0) spawnEnemy("守護騎士");
+                    if (sec % 7 === 0) spawnEnemy("弓使い");
+                    break;
+                case 7:
+                    if (sec % 4 === 0) spawnEnemy("戦士");
+                    if (sec % 6 === 0) spawnEnemy("弓使い");
+                    if (sec % 8 === 0) spawnEnemy("守護騎士");
+                    if (sec % 10 === 0) spawnEnemy("ハト助");
+                    if (sec === 20) spawnEnemy("フクロウ教授");
+                    
+                    // 100秒以降は無限メェーラムラッシュ
+                    if (sec >= 100 && sec % 3 === 0) {
+                        spawnEnemy("メェーラム敵");
+                    }
+                    break;
             }
         }
 
@@ -436,11 +464,27 @@
             } 
         }, 500);
 
+        function drawBackground(ctx, canvas) {
+            let img = getBgImageByStage(currentStage);
+            bgOffset -= 0.5; 
+            if (bgOffset <= -canvas.width) bgOffset = 0;
+
+            if (img && img.complete && img.naturalWidth !== 0) {
+                ctx.drawImage(img, bgOffset, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, bgOffset + canvas.width, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = "#333";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
         function updateGame() {
             if (!gameRunning) return;
             const canvas = document.getElementById("gameCanvas"); 
             const ctx = canvas.getContext("2d"); 
             ctx.clearRect(0, 0, 800, 400);
+
+            drawBackground(ctx, canvas);
 
             ctx.font = "50px Arial"; 
             ctx.fillText("🏰", 15, 340); 
@@ -476,15 +520,21 @@
             let initialEnemyCount = activeHeroes.length;
 
             activeHeroes.forEach((h) => {
-                if (h.name === "メェーラム敵" || h.name === "WiFiモンキー") {
+                if (h.area) {
+                    // 範囲攻撃を持つ敵（メェーラムなど）の処理
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
                     if (target) {
                         effects.push({ x: h.x, y: 340, t: "💥", life: 15 });
-                        target.hp -= h.atk;
+                        // 周囲の味方ユニットすべてにダメージ
+                        activeMonsters.forEach(m => {
+                            if (Math.abs(m.x - h.x) < 100) {
+                                m.hp -= h.atk;
+                            }
+                        });
                     } else if (h.x > 70) {
                         h.x -= h.speed;
                     } else {
-                        playerCastleHP -= 0.6;
+                        playerCastleHP -= 5.0; // 城への大ダメージ
                     }
                 } else {
                     let target = activeMonsters.find(m => { 
@@ -515,7 +565,6 @@
                 ctx.fillText(h.icon, h.x, 340);
             });
 
-            // 敵が倒された時の素材ドロップ判定
             activeHeroes.forEach(h => {
                 if (h.hp <= 0 && h.drop && h.dropRate) {
                     if (Math.random() < h.dropRate) {
