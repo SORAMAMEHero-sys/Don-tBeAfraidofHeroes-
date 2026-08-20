@@ -124,7 +124,8 @@
             "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15, isProjectile: false },
             "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24, isProjectile: false },
             "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false, isBoss: true },
-            "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 99999, speed: 4.3, range: 45, atk: 5000, isProjectile: false, isBoss: true }
+            "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 99999, speed: 4.3, range: 45, atk: 5000, isProjectile: false, isBoss: true },
+            "WiFiモンキー": { name: "WiFiモンキー", icon: "🛜🐒", hp: 5000, speed: 1.7, range: 40, atk: 9999, isProjectile: false, isBoss: true }
         };
 
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
@@ -283,7 +284,7 @@
 
         function handleStageWaves(sec) {
             if (currentStage === 7) {
-                if (sec === 1) spawnEnemy("メェーラム敵");
+                if (sec === 1) spawnEnemy("WiFiモンキー"); // ステージ7の目玉として登場！
                 if (sec === 2 || sec % 10 === 0) spawnEnemy("ハト助");
                 if (sec === 10) spawnEnemy("フクロウ教授");
                 if (sec % 15 === 0) spawnEnemy("メェーラム敵");
@@ -353,12 +354,12 @@
             let initialEnemyCount = activeHeroes.length;
 
             activeHeroes.forEach((h) => {
-                if (h.name === "メェーラム敵") {
+                if (h.name === "メェーラム敵" || h.name === "WiFiモンキー") {
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
                     if (target) {
-                        effects.push({ x: h.x, y: 340, t: "✨", life: 15 });
+                        effects.push({ x: h.x, y: 340, t: "💥", life: 15 });
                         target.hp -= h.atk;
-                        h.hp = 0; 
+                        // 単体攻撃なのでターゲットだけを即死させる
                     } else if (h.x > 70) {
                         h.x -= h.speed;
                     } else {
@@ -367,7 +368,7 @@
                 } else {
                     let target = activeMonsters.find(m => { 
                         if (m.name === "ボマー") return false; 
-                        return Math.abs(m.x - h.x) < h.range; 
+                        return Math.abs(m.x - h.x) < m.range; 
                     });
                     if (target) { 
                         if (Math.random() < 0.06) { 
