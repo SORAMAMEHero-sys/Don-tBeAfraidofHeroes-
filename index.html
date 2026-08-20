@@ -181,6 +181,7 @@
             "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15, isProjectile: false, drop: "hp", dropRate: 0.03, area: false },
             "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24, isProjectile: false, drop: "spd", dropRate: 0.03, area: false },
             "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false },
+            "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 999999, speed: 1.2, range: 40, atk: 999999, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false },
             "WiFiモンキー": { name: "WiFiモンキー", icon: "🛜🐒", hp: 5000, speed: 1.4, range: 50, atk: 999999, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false, attackInterval: 5.0 }
         };
 
@@ -436,13 +437,25 @@
                     break;
                 case 6:
                 case 7:
-                case 8:
                     if (sec % 4 === 0) spawnEnemy("ハト助");
                     if (sec % 5 === 0) spawnEnemy("守護騎士");
                     if (sec % 7 === 0) spawnEnemy("弓使い");
                     break;
+                case 8:
+                    // ステージ8：クリスタルの洞窟
+                    if (sec === 5) {
+                        spawnEnemy("フクロウ教授");
+                    }
+                    if (sec >= 25) {
+                        if (sec % 6 === 0) spawnEnemy("ハト助");
+                        if (sec % 1 === 0) spawnEnemy("弓使い");
+                    }
+                    if (sec >= 120) {
+                        spawnEnemy("メェーラム敵");
+                    }
+                    break;
                 case 9:
-                    // ステージ9：開始25秒後にWiFiモンキー、5秒ごとにハト助
+                    // ステージ9：WiFiモンキー
                     if (sec === 25) {
                         spawnEnemy("WiFiモンキー");
                     }
@@ -462,14 +475,22 @@
         }, 500);
 
         function drawBackground(ctx, canvas) {
-            let img = getBgImageByStage(currentStage);
-            if (img && img.complete && img.naturalWidth !== 0) {
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+            if (currentStage === 8) {
+                // ステージ8専用：クリスタルの洞窟風背景
+                ctx.fillStyle = "#1b263b";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "rgba(100, 200, 255, 0.15)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             } else {
-                ctx.fillStyle = "#333";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                let img = getBgImageByStage(currentStage);
+                if (img && img.complete && img.naturalWidth !== 0) {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } else {
+                    ctx.fillStyle = "#333";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
             }
         }
 
@@ -540,10 +561,9 @@
             // 敵キャラクター描画
             activeHeroes.forEach((h) => {
                 if (h.name === "WiFiモンキー") {
-                    // WiFiモンキーの特殊行動：5秒に1回攻撃
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
                     if (target) {
-                        h.attackTimer = (h.attackTimer || 0) + 0.016; // フレーム加算
+                        h.attackTimer = (h.attackTimer || 0) + 0.016; 
                         if (h.attackTimer >= 5.0) {
                             h.attackTimer = 0;
                             projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" });
@@ -655,10 +675,10 @@
             currentStage = stageNum; 
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("battleScreen").classList.add("active"); 
-            document.getElementById("stageTitle").innerText = `ステージ ${stageNum}`; 
+            document.getElementById("stageTitle", stageNum).innerText = `ステージ ${stageNum}`; 
             money = 150; 
             playerCastleHP = 1000; 
-            enemyCastleHP = (stageNum === 9) ? 10000 : 6000; 
+            enemyCastleHP = (stageNum >= 8) ? 10000 : 6000; 
             maxEnemyCastleHP = enemyCastleHP; 
             activeMonsters = []; 
             activeHeroes = []; 
