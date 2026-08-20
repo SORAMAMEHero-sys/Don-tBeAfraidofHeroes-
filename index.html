@@ -2,16 +2,20 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <!-- 画面の拡大縮小を固定 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>モンスターズ・リベンジ</title>
     <style>
-        body { text-align: center; background-color: #222; color: white; font-family: sans-serif; margin-top: 30px; }
-        canvas { border: 4px solid #fff; background: linear-gradient(to bottom, #87CEEB 60%, #8B4513 40%); box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-        
-        /* 画面切り替えの基本設定 */
+        body { text-align: center; background-color: #222; color: white; font-family: sans-serif; margin-top: 20px; overflow: hidden; }
+        /* ボタンの連打・ズーム防止 */
+        button { 
+            font-size: 16px; padding: 12px 24px; cursor: pointer; background-color: #ffcc00; 
+            border: none; border-radius: 5px; font-weight: bold; margin: 5px; 
+            touch-action: manipulation; /* 連打時の遅延やズームを防ぐ */
+        }
+        canvas { border: 4px solid #fff; background: linear-gradient(to bottom, #87CEEB 60%, #8B4513 40%); width: 90%; max-width: 800px; height: auto; }
         .screen { display: none; }
         .screen.active { display: block; }
-        
-        button { font-size: 16px; padding: 10px 20px; cursor: pointer; background-color: #ffcc00; border: none; border-radius: 5px; font-weight: bold; margin: 5px; }
         .stage-btn { font-size: 18px; padding: 15px 30px; margin: 10px; }
     </style>
 </head>
@@ -19,23 +23,19 @@
 
     <h1>モンスターズ・リベンジ</h1>
 
-    <!-- 1. ステージセレクト画面 -->
     <div id="stageSelectScreen" class="screen active">
         <h2>ステージを選んでね</h2>
         <div id="stageButtonsContainer"></div>
-        <br>
-        <button onclick="localStorage.clear(); location.reload();" style="background-color: #666;">セーブデータリセット</button>
     </div>
 
-    <!-- 2. バトル画面 -->
     <div id="battleScreen" class="screen">
         <h2 id="stageTitle">ステージ 1</h2>
         <canvas id="gameCanvas" width="800" height="400"></canvas>
         <div class="ui" style="margin-top: 15px;">
             <p>お金: <span id="money">0</span>円</p>
-            <button onclick="spawnMonster()">モンスター出撃 (コスト: 50円)</button>
-            <br><br>
-            <button onclick="returnToMap()" style="background-color: #444; color: white;">マップに戻る</button>
+            <button onclick="spawnMonster()">モンスター出撃</button>
+            <br>
+            <button onclick="returnToMap()" style="background-color: #666; color: white;">マップに戻る</button>
         </div>
     </div>
 
@@ -49,7 +49,6 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // ステージボタンの作成
         function initStageSelect() {
             const container = document.getElementById("stageButtonsContainer");
             container.innerHTML = "";
@@ -105,13 +104,11 @@
         function updateGame() {
             if (!gameRunning) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             ctx.font = "60px Arial";
             ctx.fillText("🏰", 20, 340);
             ctx.fillText("👑", 730, 340);
-
             ctx.font = "40px Arial";
-            // モンスター更新
+
             for (let i = monsters.length - 1; i >= 0; i--) {
                 let m = monsters[i];
                 let hit = heroes.length > 0 && m.x + 30 >= heroes[0].x;
@@ -122,7 +119,6 @@
                 if (m.hp <= 0) monsters.splice(i, 1);
             }
 
-            // 勇者更新
             for (let i = heroes.length - 1; i >= 0; i--) {
                 let h = heroes[i];
                 let hit = monsters.length > 0 && h.x <= monsters[0].x + 30;
@@ -147,8 +143,6 @@
             }
             gameLoopId = requestAnimationFrame(updateGame);
         }
-
-        // ページ読み込み時に実行
         initStageSelect();
     </script>
 </body>
