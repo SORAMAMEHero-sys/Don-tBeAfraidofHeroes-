@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>モンスターズ・リベンジ：アプデ版（クールダウン実装）</title>
+    <title>モンスターズ・リベンジ：メェーラム参戦版</title>
     <style>
         body { 
             text-align: center; 
@@ -37,7 +37,7 @@
             margin: 6px; 
         }
         .unit-btn { 
-            width: 75px; 
+            width: 70px; 
             height: 75px; 
             font-size: 13px; 
             background-color: #333; 
@@ -49,7 +49,6 @@
             vertical-align: top;
             transition: 0.1s;
         }
-        /* 追加：クールダウン中の赤枠スタイル */
         .unit-btn.cd { 
             border: 4px solid #ff0000 !important; 
             color: #ff0000 !important; 
@@ -101,44 +100,52 @@
     </div>
 
     <script>
-        const SAVE_KEY = "monsterGameSave_PERFECT_FIXED";
+        const SAVE_KEY = "monsterGameSave_PERFECT_FIXED_V2";
 
         let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { 
             maxUnlockedStage: 1, 
             xp: 0, 
-            levels: [1, 1, 1, 1, 1] 
+            levels: [1, 1, 1, 1, 1, 1] 
         };
+
+        // セーブデータのレベル配列要素数が足りない場合の安全策
+        function checkLevelsLength() {
+            if (!saveData.levels || saveData.levels.length < 6) {
+                saveData.levels = [1, 1, 1, 1, 1, 1];
+            }
+        }
+        checkLevelsLength();
 
         function saveGame() {
             localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
         }
 
         function unlockAllStages() {
-            saveData.maxUnlockedStage = 5;
+            saveData.maxUnlockedStage = 6;
             saveGame();
             initStageSelect();
-            alert("すべてのステージが解放されました！");
+            alert("ステージ6までの全ステージが解放されました！");
         }
 
         function resetSaveData() {
             if (confirm("セーブデータを初期化しますか？")) {
                 localStorage.removeItem(SAVE_KEY);
-                saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1] };
+                saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1] };
                 initStageSelect();
                 alert("セーブデータを初期化しました！");
             }
         }
 
-        // 味方モンスター定義（各ユニットに cd: クールダウン秒数を追加）
+        // 味方モンスター定義（メェーラム追加、スズメバチ等のバグ修正対応）
         const monsters = [
             { name: "スライム", icon: "🟢", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false },
             { name: "ゾンビ", icon: "🧟", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false },
             { name: "ボマー", icon: "💣", cost: 200, cd: 6.0, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true },
             { name: "ドラゴン", icon: "🐉", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true },
-            { name: "スズメバチ", icon: "🐝", cost: 500, cd: 5.0, baseHp: 1, speed: 3.0, range: 150, baseAtk: 30, area: true }
+            { name: "スズメバチ", icon: "🐝", cost: 500, cd: 5.0, baseHp: 1, speed: 3.0, range: 150, baseAtk: 30, area: true },
+            { name: "メェーラム", icon: "🐑", cost: 1000, cd: 12.0, baseHp: 99999, speed: 4.3, range: 45, baseAtk: 5000, area: false }
         ];
         
-        // 敵キャラクター定義
         const enemyTemplates = {
             "戦士": { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10 },
             "弓使い": { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8 },
@@ -155,10 +162,8 @@
         let gameTimer = 0;
         let stageTimerInterval = null;
 
-        // クールダウン管理用の配列（5体分を0で初期化）
-        let coolDowns = [0, 0, 0, 0, 0];
+        let coolDowns = [0, 0, 0, 0, 0, 0];
 
-        // 毎フレーム（0.1秒ごと）のクールダウン更新処理
         setInterval(() => {
             if (!gameRunning) return;
             monsters.forEach((m, i) => {
@@ -168,7 +173,7 @@
                 if (coolDowns[i] > 0) {
                     coolDowns[i] = Math.max(0, coolDowns[i] - 0.1);
                     btn.classList.add("cd");
-                    btn.innerHTML = `<span style="font-size:20px;">${m.icon}</span><br><span style="font-size:12px; font-weight:bold;">${Math.ceil(coolDowns[i])}秒</span>`;
+                    btn.innerHTML = `<span style="font-size:18px;">${m.icon}</span><br><span style="font-size:11px; font-weight:bold;">${Math.ceil(coolDowns[i])}秒</span>`;
                 } else if (btn.classList.contains("cd")) {
                     btn.classList.remove("cd");
                     updateUnitBtnDisplay(i, btn);
@@ -177,16 +182,17 @@
         }, 100);
 
         function updateUnitBtnDisplay(i, btn) {
+            checkLevelsLength();
             let m = monsters[i];
             let lvl = saveData.levels[i] || 1;
-            btn.innerHTML = `<span style="font-size:20px;">${m.icon}</span><br><span style="font-size:11px;">Lv${lvl}</span><br><span style="font-size:10px; color:#ffcc00;">${m.cost}円</span>`;
+            btn.innerHTML = `<span style="font-size:18px;">${m.icon}</span><br><span style="font-size:10px;">Lv${lvl}</span><br><span style="font-size:9px; color:#ffcc00;">${m.cost}円</span>`;
         }
 
         function initStageSelect() {
             document.getElementById("totalXp").innerText = saveData.xp;
             const container = document.getElementById("stageButtonsContainer");
             container.innerHTML = "";
-            for(let i = 1; i <= 5; i++) {
+            for(let i = 1; i <= 6; i++) {
                 let b = document.createElement("button");
                 b.className = "stage-btn";
                 let reward = i * 200;
@@ -198,6 +204,7 @@
         }
 
         function openPowerUpScreen() {
+            checkLevelsLength();
             document.getElementById("stageSelectScreen").classList.remove("active");
             document.getElementById("powerUpScreen").classList.add("active");
             document.getElementById("totalXpUp").innerText = saveData.xp;
@@ -208,9 +215,9 @@
                 let lvl = saveData.levels[i] || 1;
                 let cost = lvl * 100;
                 let div = document.createElement("div");
-                div.style.cssText = "background: rgba(255,255,255,0.05); padding: 10px; margin: 8px auto; max-width: 400px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;";
+                div.style.cssText = "background: rgba(255,255,255,0.05); padding: 8px; margin: 6px auto; max-width: 400px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;";
                 div.innerHTML = `
-                    <span style="font-size:16px;">${m.icon} ${m.name} (Lv:${lvl}/10)</span>
+                    <span style="font-size:15px;">${m.icon} ${m.name} (Lv:${lvl}/10)</span>
                     <button class="up-btn" onclick="upgradeUnit(${i})" ${lvl >= 10 ? "disabled style='background:#555;'" : ""}>
                         ${lvl >= 10 ? "MAX" : `強化(${cost}XP)`}
                     </button>
@@ -226,7 +233,7 @@
         }
 
         function upgradeUnit(index) {
-            if(!saveData.levels) saveData.levels = [1,1,1,1,1];
+            checkLevelsLength();
             let lvl = saveData.levels[index];
             let cost = lvl * 100;
             if (lvl < 10 && saveData.xp >= cost) {
@@ -242,12 +249,12 @@
         }
 
         function initBattleUI() {
-            if(!saveData.levels) saveData.levels = [1,1,1,1,1];
+            checkLevelsLength();
             const container = document.getElementById("unitButtons");
             container.innerHTML = "";
             monsters.forEach((m, i) => {
                 let btn = document.createElement("button");
-                btn.id = "btn-" + i; // IDを付与してクールダウン制御に対応
+                btn.id = "btn-" + i;
                 btn.className = "unit-btn";
                 updateUnitBtnDisplay(i, btn);
                 btn.onclick = () => spawnMonster(i);
@@ -256,13 +263,12 @@
         }
 
         function spawnMonster(index) {
-            // クールダウン中またはお金不足なら出撃不可
             if (coolDowns[index] > 0) return;
             
             let m = monsters[index];
             if (money >= m.cost) {
                 money -= m.cost;
-                coolDowns[index] = m.cd; // クールダウン開始
+                coolDowns[index] = m.cd;
                 document.getElementById("money").innerText = money;
                 
                 let lvl = saveData.levels[index] || 1;
@@ -303,6 +309,13 @@
             } else if (currentStage === 5) {
                 if (sec === 6) spawnEnemy("フクロウ教授");
                 if (sec === 8 || (sec > 0 && sec % 20 === 0)) spawnEnemy("ハト助");
+            } else if (currentStage === 6) {
+                // ステージ6: 5秒間は出ない。1秒ごとに守護騎士、2秒ごとに弓使い、20秒後にフクロウ教授
+                if (sec > 5) {
+                    if (sec % 1 === 0) spawnEnemy("守護騎士");
+                    if (sec % 2 === 0) spawnEnemy("弓使い");
+                    if (sec === 20) spawnEnemy("フクロウ教授");
+                }
             }
         }
 
@@ -338,6 +351,11 @@
                         effects.push({ x: m.x, y: 340, t: "💥", life: 15 });
                         activeHeroes.forEach(h => { if (Math.abs(h.x - m.x) < 120) h.hp -= m.atk; });
                         m.hp = 0;
+                    } else if (m.name === "メェーラム") {
+                        // メェーラムの攻撃処理：1回攻撃したら消える（ボマー仕様）
+                        effects.push({ x: m.x, y: 340, t: "✨", life: 15 });
+                        target.hp -= m.atk;
+                        m.hp = 0;
                     } else if (Math.random() < 0.06) {
                         if (m.area) {
                             effects.push({ x: target.x, y: 340, t: "🔥", life: 15 });
@@ -359,7 +377,7 @@
 
             activeHeroes.forEach((h, i) => {
                 let target = activeMonsters.find(m => {
-                    if (m.name === "ボマー") return false;
+                    if (m.name === "ボマー" || m.name === "メェーラム") return false;
                     return Math.abs(m.x - h.x) < h.range;
                 });
                 
@@ -423,7 +441,7 @@
                     saveData.xp += rewardXp;
                     alert(`🎉 ステージ ${currentStage} クリア！！\n報酬として ${rewardXp} XP 獲得！`);
                     
-                    if (currentStage === saveData.maxUnlockedStage && currentStage < 5) {
+                    if (currentStage === saveData.maxUnlockedStage && currentStage < 6) {
                         saveData.maxUnlockedStage++;
                     }
                     saveGame();
@@ -446,7 +464,11 @@
             
             money = 150;
             playerCastleHP = 1000; maxPlayerCastleHP = 1000;
-            enemyCastleHP = stageNum === 5 ? 4000 : (800 + (stageNum * 500)); 
+            
+            // ステージごとの敵城HP調整
+            if (stageNum === 5) enemyCastleHP = 4000;
+            else if (stageNum === 6) enemyCastleHP = 6000;
+            else enemyCastleHP = 800 + (stageNum * 500);
             maxEnemyCastleHP = enemyCastleHP;
             
             activeMonsters = [];
@@ -455,8 +477,7 @@
             effects = [];
             gameTimer = 0;
             
-            // バトル開始時にクールダウンをリセット
-            coolDowns = [0, 0, 0, 0, 0];
+            coolDowns = [0, 0, 0, 0, 0, 0];
 
             document.getElementById("money").innerText = money;
             initBattleUI();
