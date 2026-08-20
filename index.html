@@ -122,7 +122,7 @@
         function getBgImageByStage(stage) {
             if (stage <= 2) return bgImages["朝の森"];
             if (stage <= 4) return bgImages["夕方の森"];
-            if (stage === 5) return bgImages["夜の森"];
+            if (stage <= 6) return bgImages["夜の森"];
             return bgImages["ビーチ"];
         }
 
@@ -145,7 +145,7 @@
         checkSaveDataIntegrity();
         
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
-        function unlockAllStages() { saveData.maxUnlockedStage = 7; saveData.unlockedUnits = [true, true, true, true, true, true]; saveGame(); initStageSelect(); }
+        function unlockAllStages() { saveData.maxUnlockedStage = 9; saveData.unlockedUnits = [true, true, true, true, true, true]; saveGame(); initStageSelect(); }
         function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true], evolved: [false, false, false, false, false, false], materials: { atk: 0, hp: 0, spd: 0 } }; initStageSelect(); } }
 
         const monsters = [
@@ -181,7 +181,7 @@
             "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15, isProjectile: false, drop: "hp", dropRate: 0.03, area: false },
             "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24, isProjectile: false, drop: "spd", dropRate: 0.03, area: false },
             "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false },
-            "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 999999, speed: 2.5, range: 50, atk: 999999, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: true }
+            "WiFiモンキー": { name: "WiFiモンキー", icon: "🛜🐒", hp: 5000, speed: 1.4, range: 50, atk: 999999, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false, attackInterval: 5.0 }
         };
 
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
@@ -221,7 +221,7 @@
 
             const container = document.getElementById("stageButtonsContainer"); 
             container.innerHTML = ""; 
-            for(let i = 1; i <= 7; i++) { 
+            for(let i = 1; i <= 9; i++) { 
                 let b = document.createElement("button"); 
                 b.className = "stage-btn"; 
                 b.innerText = i <= saveData.maxUnlockedStage ? `ステージ ${i} (${i * 200}XP)` : `ステージ ${i} 🔒`; 
@@ -413,7 +413,7 @@
         function spawnEnemy(key) { 
             let template = enemyTemplates[key]; 
             if(template) {
-                activeHeroes.push({ ...template, x: 730, hp: template.hp, maxHp: template.hp });
+                activeHeroes.push({ ...template, x: 730, hp: template.hp, maxHp: template.hp, attackTimer: 0 });
                 if (template.isBoss) { playSound("boss"); }
             } 
         }
@@ -435,19 +435,19 @@
                     if (sec % 4 === 0) spawnEnemy("ハト助");
                     break;
                 case 6:
+                case 7:
+                case 8:
                     if (sec % 4 === 0) spawnEnemy("ハト助");
                     if (sec % 5 === 0) spawnEnemy("守護騎士");
                     if (sec % 7 === 0) spawnEnemy("弓使い");
                     break;
-                case 7:
-                    if (sec % 4 === 0) spawnEnemy("戦士");
-                    if (sec % 6 === 0) spawnEnemy("弓使い");
-                    if (sec % 8 === 0) spawnEnemy("守護騎士");
-                    if (sec % 10 === 0) spawnEnemy("ハト助");
-                    if (sec === 20) spawnEnemy("フクロウ教授");
-                    
-                    if (sec >= 100 && sec % 3 === 0) {
-                        spawnEnemy("メェーラム敵");
+                case 9:
+                    // ステージ9：開始25秒後にWiFiモンキー、5秒ごとにハト助
+                    if (sec === 25) {
+                        spawnEnemy("WiFiモンキー");
+                    }
+                    if (sec % 5 === 0) {
+                        spawnEnemy("ハト助");
                     }
                     break;
             }
@@ -539,7 +539,23 @@
 
             // 敵キャラクター描画
             activeHeroes.forEach((h) => {
-                if (h.area) {
+                if (h.name === "WiFiモンキー") {
+                    // WiFiモンキーの特殊行動：5秒に1回攻撃
+                    let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
+                    if (target) {
+                        h.attackTimer = (h.attackTimer || 0) + 0.016; // フレーム加算
+                        if (h.attackTimer >= 5.0) {
+                            h.attackTimer = 0;
+                            projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" });
+                            target.hp -= h.atk;
+                            effects.push({ x: target.x, y: 330, t: "💥", life: 15 });
+                        }
+                    } else if (h.x > 70) {
+                        h.x -= h.speed;
+                    } else {
+                        playerCastleHP -= 5.0;
+                    }
+                } else if (h.area) {
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
                     if (target) {
                         effects.push({ x: h.x, y: 330, t: "💥", life: 15 });
@@ -556,7 +572,7 @@
                 } else {
                     let target = activeMonsters.find(m => { 
                         if (m.name === "ボマー") return false; 
-                        return Math.abs(m.x - h.x) < m.range; 
+                        return Math.abs(m.x - h.x) < h.range; 
                     });
                     if (target) { 
                         if (Math.random() < 0.06) { 
@@ -623,7 +639,7 @@
                 gameRunning = false;
                 let reward = currentStage * 200;
                 saveData.xp += reward;
-                if (currentStage === saveData.maxUnlockedStage && saveData.maxUnlockedStage < 7) {
+                if (currentStage === saveData.maxUnlockedStage && saveData.maxUnlockedStage < 9) {
                     saveData.maxUnlockedStage++;
                 }
                 saveGame();
@@ -642,7 +658,7 @@
             document.getElementById("stageTitle").innerText = `ステージ ${stageNum}`; 
             money = 150; 
             playerCastleHP = 1000; 
-            enemyCastleHP = (stageNum === 7) ? 8000 : 6000; 
+            enemyCastleHP = (stageNum === 9) ? 10000 : 6000; 
             maxEnemyCastleHP = enemyCastleHP; 
             activeMonsters = []; 
             activeHeroes = []; 
