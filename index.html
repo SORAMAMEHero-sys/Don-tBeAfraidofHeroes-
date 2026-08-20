@@ -96,7 +96,8 @@
             }
         }
 
-        const SAVE_KEY = "monsterGameSave_PERFECT_FIXED";
+        // セーブキーを元に戻して既存のデータが読み込めるように修正
+        const SAVE_KEY = "monsterGameSave_v1";
         let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true] };
         
         function checkSaveDataIntegrity() { 
@@ -402,7 +403,7 @@
             projectiles.forEach(p => {
                 ctx.fillStyle = p.col;
                 ctx.fillRect(p.x, 310, 6, 6);
-.x += (p.targetX > p.x ? 5 : -5);
+                p.x += (p.targetX > p.x ? 5 : -5);
             });
             projectiles = projectiles.filter(p => Math.abs(p.x - p.targetX) > 10);
 
@@ -439,6 +440,7 @@
             currentStage = stageNum; 
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("battleScreen").classList.add("active"); 
+            document.getElementById("stageTitle", `ステージ ${stageNum}`); 
             document.getElementById("stageTitle").innerText = `ステージ ${stageNum}`; 
             money = 150; 
             playerCastleHP = 1000; 
