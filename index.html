@@ -58,7 +58,6 @@
     </div>
 
     <script>
-        // セーブデータのキーを元通りに修正
         const SAVE_KEY = "monsterGameSave_PERFECT_FIXED";
         let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1] };
         
@@ -71,23 +70,23 @@
         function unlockAllStages() { saveData.maxUnlockedStage = 7; saveGame(); initStageSelect(); }
         function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1] }; initStageSelect(); } }
 
-        // 味方ユニット（全5種）
+        // 味方ユニット（スズメバチにスキル情報を追加）
         const monsters = [
-            { name: "スライム", icon: "🟢", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false },
-            { name: "ゾンビ", icon: "🧟", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false },
-            { name: "ボマー", icon: "💣", cost: 200, cd: 6.0, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true },
-            { name: "ドラゴン", icon: "🐉", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true },
-            { name: "スズメバチ", icon: "🐝", cost: 500, cd: 5.0, baseHp: 100, speed: 3.0, range: 150, baseAtk: 30, area: true }
+            { name: "スライム", icon: "🟢", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false, skill: null },
+            { name: "ゾンビ", icon: "🧟", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false, skill: null },
+            { name: "ボマー", icon: "💣", cost: 200, cd: 6.0, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true, skill: null },
+            { name: "ドラゴン", icon: "🐉", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true, skill: null },
+            { name: "スズメバチ", icon: "🐝", cost: 500, cd: 5.0, baseHp: 100, speed: 3.0, range: 150, baseAtk: 30, area: true, skill: { name: "飛び道具無効", desc: "弓使いなどの遠距離攻撃を完全に無効化する" } }
         ];
         
-        // 敵キャラクター一覧（メェーラムが敵側に！）
+        // 敵キャラクター一覧
         const enemyTemplates = {
-            "戦士": { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10 },
-            "弓使い": { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8 },
-            "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15 },
-            "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24 },
-            "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30 },
-            "メェーラム": { name: "メェーラム", icon: "🐑", hp: 99999, speed: 4.3, range: 45, atk: 5000 }
+            "戦士": { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10, isProjectile: false },
+            "弓使い": { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8, isProjectile: true },
+            "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15, isProjectile: false },
+            "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24, isProjectile: false },
+            "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false },
+            "メェーラム": { name: "メェーラム", icon: "🐑", hp: 99999, speed: 4.3, range: 45, atk: 5000, isProjectile: false }
         };
 
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
@@ -131,6 +130,7 @@
             } 
         }
 
+        // パワーアップ画面にスキル表示を追加
         function openPowerUpScreen() { 
             checkLevelsLength(); 
             document.getElementById("stageSelectScreen").classList.remove("active"); 
@@ -142,8 +142,20 @@
                 let lvl = saveData.levels[i] || 1; 
                 let cost = lvl * 100; 
                 let div = document.createElement("div"); 
-                div.style.cssText = "background: rgba(255,255,255,0.05); padding: 8px; margin: 6px auto; max-width: 400px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;"; 
-                div.innerHTML = `<span style="font-size:15px;">${m.icon} ${m.name} (Lv:${lvl}/10)</span><button class="up-btn" onclick="upgradeUnit(${i})" ${lvl >= 10 ? "disabled style='background:#555;'" : ""}>${lvl >= 10 ? "MAX" : `強化(${cost}XP)`}</button>`; 
+                div.style.cssText = "background: rgba(255,255,255,0.05); padding: 10px; margin: 6px auto; max-width: 400px; border-radius: 8px; text-align: left;"; 
+                
+                let skillHtml = "";
+                if (m.skill) {
+                    skillHtml = `<div style="font-size: 12px; color: #ffcc00; margin-top: 4px;">✨スキル: ${m.skill.name} - ${m.skill.desc}</div>`;
+                }
+
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size:15px; font-weight: bold;">${m.icon} ${m.name} (Lv:${lvl}/10)</span>
+                        <button class="up-btn" onclick="upgradeUnit(${i})" ${lvl >= 10 ? "disabled style='background:#555;'" : ""}>${lvl >= 10 ? "MAX" : `強化(${cost}XP)`}</button>
+                    </div>
+                    ${skillHtml}
+                `; 
                 list.appendChild(div); 
             }); 
         }
@@ -202,7 +214,6 @@
             if(template) activeHeroes.push({ ...template, x: 730, hp: template.hp, maxHp: template.hp }); 
         }
 
-        // ステージウェーブ設定
         function handleStageWaves(sec) {
             if (currentStage === 7) {
                 if (sec === 1) spawnEnemy("メェーラム");
@@ -228,7 +239,6 @@
             }
         }
 
-        // 資金自動増加
         setInterval(() => { 
             if (!gameRunning) return; 
             if (money < 9999) { 
@@ -243,12 +253,10 @@
             const ctx = canvas.getContext("2d"); 
             ctx.clearRect(0, 0, 800, 400);
 
-            // 城の描画
             ctx.font = "50px Arial"; 
             ctx.fillText("🏰", 15, 340); 
             ctx.fillText("👑", 735, 340);
 
-            // 城のHPバー
             const bw = 80, bh = 8; 
             ctx.fillStyle = "#555"; ctx.fillRect(15, 260, bw, bh); 
             ctx.fillStyle = "#2ecc71"; ctx.fillRect(15, 260, bw * Math.max(0, playerCastleHP / maxPlayerCastleHP), bh); 
@@ -276,14 +284,14 @@
                 ctx.fillText(m.icon, m.x, 340);
             });
 
-            // 敵ユニットの更新・描画
+            // 敵ユニットの更新・描画（スズメバチの飛び道具無効スキル判定）
             activeHeroes.forEach((h, i) => {
                 if (h.name === "メェーラム") {
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
                     if (target) {
                         effects.push({ x: h.x, y: 340, t: "✨", life: 15 });
                         target.hp -= h.atk;
-                        h.hp = 0; // 1回攻撃したら消滅
+                        h.hp = 0; 
                     } else if (h.x > 70) {
                         h.x -= h.speed;
                     } else {
@@ -296,8 +304,13 @@
                     });
                     if (target) { 
                         if (Math.random() < 0.06) { 
-                            projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
-                            target.hp -= h.atk; 
+                            // 敵が「弓使い」などの飛び道具持ちで、ターゲットが「スズメバチ」かつスキルを持っている場合
+                            if (h.isProjectile && target.name === "スズメバチ" && target.skill) {
+                                effects.push({ x: target.x, y: 340, t: "🛡️", life: 15 }); // ガードエフェクト
+                            } else {
+                                projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
+                                target.hp -= h.atk; 
+                            }
                         } 
                     } else if (h.x > 70) {
                         h.x -= h.speed; 
@@ -309,11 +322,9 @@
                 ctx.fillText(h.icon, h.x, 340);
             });
 
-            // 死亡判定
             activeMonsters = activeMonsters.filter(m => m.hp > 0);
             activeHeroes = activeHeroes.filter(h => h.hp > 0);
 
-            // 弾・エフェクトの描画
             projectiles.forEach(p => {
                 ctx.fillStyle = p.col;
                 ctx.fillRect(p.x, 310, 6, 6);
@@ -328,7 +339,6 @@
             });
             effects = effects.filter(e => e.life > 0);
 
-            // 勝敗判定
             if (playerCastleHP <= 0) {
                 gameRunning = false;
                 alert("敗北しました...");
