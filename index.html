@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>モンスターズ・リベンジ：ボマー参戦</title>
+    <title>モンスターズ・リベンジ：セーブ完全保護版</title>
     <style>
         body { text-align: center; background-color: #222; color: white; font-family: sans-serif; touch-action: manipulation; }
         canvas { border: 4px solid #fff; background: linear-gradient(to bottom, #87CEEB 60%, #8B4513 40%); width: 90%; max-width: 800px; height: auto; }
@@ -11,32 +11,52 @@
         .screen.active { display: block; }
         button { font-size: 14px; padding: 10px; cursor: pointer; background-color: #ffcc00; border: none; border-radius: 5px; font-weight: bold; margin: 5px; touch-action: manipulation; }
         .unit-btn { width: 100px; height: 60px; }
+        .stage-btn { font-size: 18px; padding: 15px 30px; margin: 10px; }
     </style>
 </head>
 <body>
 
     <h1>モンスターズ・リベンジ</h1>
 
+    <!-- 1. ステージセレクト画面 -->
     <div id="stageSelectScreen" class="screen active">
         <h2>ステージを選んでね</h2>
         <div id="stageButtonsContainer"></div>
+        <br><br>
+        <button onclick="resetSaveData()" style="background-color: #d9534f; color: white; font-size: 12px; padding: 5px 10px;">セーブデータをリセット</button>
     </div>
 
+    <!-- 2. バトル画面 -->
     <div id="battleScreen" class="screen">
         <h2 id="stageTitle">ステージ 1</h2>
         <canvas id="gameCanvas" width="800" height="400"></canvas>
         <p>お金: <span id="money">0</span>円</p>
         <div id="unitButtons"></div>
         <br>
-        <button onclick="returnToMap()" style="background-color: #666;">マップに戻る</button>
+        <button onclick="returnToMap()" style="background-color: #666; color: white;">マップに戻る</button>
     </div>
 
     <script>
-        // キャラデータ
+        // --- セーブデータの安全な読み込み ---
+        let saveData = JSON.parse(localStorage.getItem("monsterGameSave")) || { maxUnlockedStage: 1 };
+
+        function saveGame() {
+            localStorage.setItem("monsterGameSave", JSON.stringify(saveData));
+        }
+
+        function resetSaveData() {
+            if (confirm("セーブデータを初期化しますか？")) {
+                localStorage.removeItem("monsterGameSave");
+                saveData = { maxUnlockedStage: 1 };
+                initStageSelect();
+                alert("リセットしました！");
+            }
+        }
+
         const monsters = [
             { name: "スライム", icon: "🧌", cost: 50, hp: 60, speed: 2, atk: 0.5 },
             { name: "ゾンビ", icon: "🧟", cost: 120, hp: 300, speed: 0.8, atk: 0.3 },
-            { name: "ボマー", icon: "💣", cost: 200, hp: 30, speed: 4, atk: 100 } // 特攻兵！
+            { name: "ボマー", icon: "💣", cost: 200, hp: 30, speed: 4, atk: 100 }
         ];
         const heroes = [
             { icon: "⚔️", hp: 40, speed: 1.2 },
@@ -44,11 +64,10 @@
             { icon: "🛡️", hp: 400, speed: 0.5 }
         ];
 
-        let saveData = JSON.parse(localStorage.getItem("monsterGameSave")) || { maxUnlockedStage: 1 };
         let money = 100, playerCastleHP = 1000, enemyCastleHP = 1000, gameRunning = false;
         let activeMonsters = [], activeHeroes = [], currentStage = 1;
+        let gameLoopId = null;
 
-        // UI初期化
         function initUI() {
             const container = document.getElementById("unitButtons");
             container.innerHTML = "";
@@ -64,18 +83,26 @@
         function spawnMonster(index) {
             if (money >= monsters[index].cost) {
                 money -= monsters[index].cost;
+                document.getElementById("money").innerText = money;
                 activeMonsters.push({ ...monsters[index], x: 70 });
             }
         }
 
-        // 敵の生成（ランダム）
+        // 敵の生成
         setInterval(() => {
             if (!gameRunning) return;
             let type = heroes[Math.floor(Math.random() * heroes.length)];
             activeHeroes.push({ ...type, x: 730, hp: type.hp + (currentStage * 20) });
         }, 2000);
 
-        setInterval(() => { if (gameRunning && money < 999) money += 15; }, 500);
+        // お金の自動増加
+        setInterval(() => {
+            if (!gameRunning) return;
+            if (money < 999) {
+                money += 15;
+                document.getElementById("money").innerText = money;
+            }
+        }, 500);
 
         function update() {
             if (!gameRunning) return;
@@ -85,57 +112,90 @@
             ctx.fillText("🏰", 20, 340); ctx.fillText("👑", 730, 340);
 
             // モンスター更新
-            activeMonsters.forEach((m, i) => {
+            for (let i = activeMonsters.length - 1; i >= 0; i--) {
+                let m = activeMonsters[i];
                 let hit = activeHeroes.length > 0 && m.x + 30 >= activeHeroes[0].x;
                 if (!hit && m.x < 700) m.x += m.speed;
                 else if (m.x >= 700) enemyCastleHP -= 0.5;
                 else {
                     activeHeroes[0].hp -= m.atk;
-                    if (m.name === "ボマー") m.hp = 0; // ボマーは攻撃したら自滅
+                    if (m.name === "ボマー") m.hp = 0;
                 }
+                ctx.font = "40px Arial";
                 ctx.fillText(m.icon, m.x, 340);
                 if (m.hp <= 0) activeMonsters.splice(i, 1);
-            });
+            }
 
             // 勇者更新
-            activeHeroes.forEach((h, i) => {
+            for (let i = activeHeroes.length - 1; i >= 0; i--) {
+                let h = activeHeroes[i];
                 let hit = activeMonsters.length > 0 && h.x <= activeMonsters[0].x + 30;
                 if (!hit && h.x > 70) h.x -= h.speed;
                 else if (h.x <= 70) playerCastleHP -= 0.5;
                 else activeMonsters[0].hp -= 0.5;
+                ctx.font = "40px Arial";
                 ctx.fillText(h.icon, h.x, 340);
                 if (h.hp <= 0) activeHeroes.splice(i, 1);
-            });
+            }
 
             if (playerCastleHP <= 0 || enemyCastleHP <= 0) {
                 gameRunning = false;
+                cancelAnimationFrame(gameLoopId);
                 if (enemyCastleHP <= 0) {
-                    alert("クリア！");
-                    if (currentStage < 3) saveData.maxUnlockedStage = Math.max(saveData.maxUnlockedStage, ++currentStage);
-                    localStorage.setItem("monsterGameSave", JSON.stringify(saveData));
+                    alert("ステージ " + currentStage + " クリア！");
+                    // 次のステージを解放して即座にセーブ！
+                    if (currentStage === saveData.maxUnlockedStage && currentStage < 3) {
+                        saveData.maxUnlockedStage++;
+                        saveGame(); // ← ここで確実に保存！
+                    }
+                } else {
+                    alert("敗北しました...");
                 }
                 returnToMap();
+                return;
             }
-            requestAnimationFrame(update);
+            gameLoopId = requestAnimationFrame(update);
         }
 
         function startBattle(s) {
             currentStage = s;
-            document.getElementById("stageSelectScreen").className = "screen";
-            document.getElementById("battleScreen").className = "screen active";
-            gameRunning = true; update();
+            document.getElementById("stageSelectScreen").classList.remove("active");
+            document.getElementById("battleScreen").classList.add("active");
+            document.getElementById("stageTitle").innerText = "ステージ " + s;
+            money = 100;
+            playerCastleHP = 1000;
+            enemyCastleHP = 800 + (s * 400);
+            activeMonsters = [];
+            activeHeroes = [];
+            document.getElementById("money").innerText = money;
+            gameRunning = true;
+            update();
         }
 
-        function returnToMap() { gameRunning = false; location.reload(); }
+        function returnToMap() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoopId);
+            document.getElementById("battleScreen").classList.remove("active");
+            document.getElementById("stageSelectScreen").classList.add("active");
+            initStageSelect();
+        }
 
         // ステージ選択ボタン生成
-        const sCont = document.getElementById("stageButtonsContainer");
-        for(let i=1; i<=3; i++) {
-            let b = document.createElement("button");
-            b.innerText = i <= saveData.maxUnlockedStage ? "ステージ" + i : "🔒";
-            b.onclick = () => startBattle(i);
-            sCont.appendChild(b);
+        function initStageSelect() {
+            const sCont = document.getElementById("stageButtonsContainer");
+            sCont.innerHTML = "";
+            for(let i=1; i<=3; i++) {
+                let b = document.createElement("button");
+                b.className = "stage-btn";
+                b.innerText = i <= saveData.maxUnlockedStage ? "ステージ " + i : "ステージ " + i + " 🔒";
+                b.disabled = i > saveData.maxUnlockedStage;
+                b.onclick = () => startBattle(i);
+                sCont.appendChild(b);
+            }
         }
+
+        // 起動時
+        initStageSelect();
         initUI();
     </script>
 </body>
