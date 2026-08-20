@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>モンスターズ・リベンジ：すり抜け修正版</title>
+    <title>モンスターズ・リベンジ</title>
     <style>
         body { text-align: center; background-color: #222; color: white; font-family: sans-serif; touch-action: manipulation; }
         canvas { border: 4px solid #fff; background: linear-gradient(to bottom, #87CEEB 60%, #8B4513 40%); width: 90%; max-width: 800px; height: auto; }
@@ -79,7 +79,7 @@
         }
 
         const monsters = [
-            { name: "スライム", icon: "🧌", cost: 50, baseHp: 80, speed: 2, baseAtk: 0.8, range: "single" },
+            { name: "スライム", icon: "🟢", cost: 50, baseHp: 80, speed: 2, baseAtk: 0.8, range: "single" }, // スライムらしいアイコンに変更！
             { name: "ゾンビ", icon: "🧟", cost: 120, baseHp: 350, speed: 0.8, baseAtk: 0.5, range: "single" },
             { name: "ボマー", icon: "💣", cost: 200, baseHp: 40, speed: 4, baseAtk: 120, range: "single" },
             { name: "ドラゴン", icon: "🐉", cost: 3000, baseHp: 300, speed: 1.2, baseAtk: 3.0, range: "area" }
@@ -185,15 +185,12 @@
             }
         }
 
-        // 敵の生成（ステージ1は少し優しく、後半は激しく）
         setInterval(() => {
             if (!gameRunning) return;
             let type = heroes[Math.floor(Math.random() * heroes.length)];
-            let intervalStageMultiplier = Math.max(1, 3 - (currentStage * 0.5));
             activeHeroes.push({ ...type, x: 730, hp: type.hp + (currentStage * 15) });
         }, 2500);
 
-        // お金の自動増加（少し早めに）
         setInterval(() => {
             if (!gameRunning) return;
             if (money < 9999) {
@@ -220,24 +217,16 @@
             ctx.fillStyle = "limegreen"; ctx.fillRect(720, 250, barWidth * Math.max(0, enemyCastleHP / maxEnemyCastleHP), barHeight);
             ctx.strokeStyle = "white"; ctx.strokeRect(720, 250, barWidth, barHeight);
 
-            // --- 厳密な戦闘＆移動判定（すり抜け防止） ---
-            // 1. 最前線の敵（一番左にいる勇者）を見つける
-            let frontHero = activeHeroes.length > 0 ? activeHeroes.reduce((prev, curr) => prev.x < curr.x ? prev : curr) : null;
-
             // モンスター更新
             for (let i = activeMonsters.length - 1; i >= 0; i--) {
                 let m = activeMonsters[i];
-                
-                // 目の前に敵（最前線の勇者）がいるかチェック（距離35px以内）
                 let targetHero = activeHeroes.find(h => h.x <= m.x + 35 && h.x >= m.x - 10);
 
                 if (!targetHero && m.x < 700) {
-                    // 前に敵がいなければ前進（ただし自分より前にいる味方モンスターに重なりすぎないようにする制御も可能ですが基本は進む）
                     m.x += m.speed;
                 } else if (m.x >= 700) {
                     enemyCastleHP -= 0.5;
                 } else if (targetHero) {
-                    // 戦闘中！
                     if (m.range === "area") {
                         activeHeroes.forEach(h => { if (h.x <= m.x + 80) h.hp -= m.atk; });
                     } else {
@@ -251,14 +240,9 @@
                 if (m.hp <= 0) activeMonsters.splice(i, 1);
             }
 
-            // 2. 最前線の味方（一番右にいるモンスター）を見つける
-            let frontMonster = activeMonsters.length > 0 ? activeMonsters.reduce((prev, curr) => prev.x > curr.x ? prev : curr) : null;
-
             // 勇者更新
             for (let i = activeHeroes.length - 1; i >= 0; i--) {
                 let h = activeHeroes[i];
-                
-                // 目の前にモンスターがいるかチェック
                 let targetMonster = activeMonsters.find(m => m.x >= h.x - 35 && m.x <= h.x + 10);
 
                 if (!targetMonster && h.x > 70) {
@@ -266,7 +250,6 @@
                 } else if (h.x <= 70) {
                     playerCastleHP -= 0.5;
                 } else if (targetMonster) {
-                    // 戦闘中！
                     targetMonster.hp -= h.atk;
                 }
 
