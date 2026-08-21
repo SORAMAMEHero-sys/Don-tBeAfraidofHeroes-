@@ -90,6 +90,7 @@
             '8': 'hoshizora.mp3',
             '9': 'crystal.mp3',
             '10': 'boss.mp3',
+            '11': 'boss.mp3',
             '100': 'beach.mp3'
         };
 
@@ -219,11 +220,12 @@
             if (!saveData.evolved || saveData.evolved.length < 7) saveData.evolved = [false, false, false, false, false, false, false];
             if (!saveData.materials) saveData.materials = { atk: 0, hp: 0, spd: 0 };
             if (saveData.xpStageAvailableTime === undefined) saveData.xpStageAvailableTime = 0;
+            if (saveData.maxUnlockedStage < 1) saveData.maxUnlockedStage = 1;
         }
         checkSaveDataIntegrity();
         
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
-        function unlockAllStages() { saveData.maxUnlockedStage = 10; saveData.unlockedUnits = [true, true, true, true, true, true, true]; saveGame(); initStageSelect(); }
+        function unlockAllStages() { saveData.maxUnlockedStage = 11; saveData.unlockedUnits = [true, true, true, true, true, true, true]; saveGame(); initStageSelect(); }
         function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); location.reload(); } }
 
         const monsters = [
@@ -336,7 +338,7 @@
 
             const container = document.getElementById("stageButtonsContainer"); 
             container.innerHTML = ""; 
-            for(let i = 1; i <= 10; i++) { 
+            for(let i = 1; i <= 11; i++) { 
                 let b = document.createElement("button"); 
                 b.className = "stage-btn"; 
                 b.innerText = i <= saveData.maxUnlockedStage ? `ステージ ${i} (${i * 200}XP)` : `ステージ ${i} 🔒`; 
@@ -595,6 +597,10 @@
                     if (sec % 6 === 0) spawnEnemy("弓使い");
                     if (sec === 20) spawnEnemy("フクロウ教授");
                     break;
+                case 11:
+                    if (sec === 12) spawnEnemy("ダークウルフ");
+                    if (sec >= 10 && (sec - 10) % 15 === 0) spawnEnemy("フクロウ教授");
+                    break;
             }
         }
 
@@ -820,7 +826,7 @@
                 stopBGM();
                 let reward = currentStage * 200;
                 saveData.xp += reward;
-                if (currentStage === saveData.maxUnlockedStage && saveData.maxUnlockedStage < 10) {
+                if (currentStage === saveData.maxUnlockedStage && saveData.maxUnlockedStage < 11) {
                     saveData.maxUnlockedStage++;
                 }
                 saveGame();
@@ -848,6 +854,8 @@
                 enemyCastleHP = 6600;
             } else if (stageNum === 10) {
                 enemyCastleHP = 10000;
+            } else if (stageNum === 11) {
+                enemyCastleHP = 15000;
             } else {
                 enemyCastleHP = (stageNum >= 8 && stageNum !== 100) ? 3300 : 2000;
             }
