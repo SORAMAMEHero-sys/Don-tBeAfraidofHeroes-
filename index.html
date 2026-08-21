@@ -79,7 +79,6 @@
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // ステージ5と6を yuugata.mp3 に変更した設定
         const bgmFiles = {
             '1': 'isakai.mp3',
             '2': 'isakai.mp3',
@@ -649,7 +648,8 @@
                         effects.push({ x: 720, y: 280, t: "+100XP!", life: 15 });
                         m.hp = 0;
                     } else {
-                        enemyCastleHP -= 0.6;
+                        // 城を壊すスピードを約3倍にする（削る量を 0.6 から 1.8 に変更）
+                        enemyCastleHP -= 1.8;
                         
                         if (currentStage === 10 && !stage10ShockwaveTriggered && enemyCastleHP < maxEnemyCastleHP) {
                             stage10ShockwaveTriggered = true;
@@ -823,14 +823,15 @@
             money = 150; 
             playerCastleHP = 1000; 
             
+            // 各ステージの敵の城のHPを約3分の1に調整しました！
             if (stageNum === 7) {
-                enemyCastleHP = 15000;
+                enemyCastleHP = 5000;
             } else if (stageNum === 9) {
-                enemyCastleHP = 20000;
+                enemyCastleHP = 6600;
             } else if (stageNum === 10) {
-                enemyCastleHP = 30000;
+                enemyCastleHP = 10000;
             } else {
-                enemyCastleHP = (stageNum >= 8 && stageNum !== 100) ? 10000 : 6000;
+                enemyCastleHP = (stageNum >= 8 && stageNum !== 100) ? 3300 : 2000;
             }
             maxEnemyCastleHP = enemyCastleHP; 
 
