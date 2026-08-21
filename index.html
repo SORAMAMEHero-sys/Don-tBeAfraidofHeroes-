@@ -83,7 +83,7 @@
             '1': 'isakai.mp3', '2': 'isakai.mp3', '3': 'yuugata.mp3', '4': 'yuugata.mp3',
             '5': 'isakai.mp3', '6': 'hoshizora.mp3', '7': 'hoshizora.mp3', '8': 'beach.mp3',
             '9': 'hoshizora.mp3', '10': 'hoshizora.mp3', '11': 'hoshizora.mp3', '12': 'hoshizora.mp3',
-            '13': 'hoshizora.mp3', '100': 'beach.mp3'
+            '13': 'hoshizora.mp3', '100': 'beach.mp3', 'boss': 'boss.mp3'
         };
 
         let currentBgm = null;
@@ -651,7 +651,7 @@
                             activeMonsters.forEach(mon => { mon.x = Math.min(mon.x, 120); });
                             effects.push({ x: 400, y: 200, t: "⚡ 衝撃波 ＆ ダークウルフ出現！ ⚡", life: 60 });
                             spawnEnemy("ダークウルフ");
-                            playBGM(10, 'boss.mp3');
+                            playBGM('boss');
                         }
 
                         if (currentStage === 12) {
