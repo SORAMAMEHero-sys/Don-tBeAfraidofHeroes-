@@ -79,6 +79,7 @@
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+        // 小文字に統一されたBGMファイルマッピング
         const bgmFiles = {
             '1': 'isakai.mp3',
             '2': 'isakai.mp3',
@@ -88,23 +89,9 @@
             '6': 'yoru.mp3',
             '7': 'beach.mp3',
             '8': 'hoshizora.mp3',
-            '9': 'hoshizora.mp3',
+            '9': 'crystal.mp3',
             '10': 'boss.mp3',
             '100': 'beach.mp3'
-        };
-        
-        const bgmFilesJp = {
-            '1': '異世界レシピ.mp3',
-            '2': '異世界レシピ.mp3',
-            '3': '夕方.mp3',
-            '4': '夕方.mp3',
-            '5': '夜.mp3',
-            '6': '夜.mp3',
-            '7': 'ビーチ.mp3',
-            '8': '星空.mp3',
-            '9': '星空.mp3',
-            '10': 'BOSS.mp3',
-            '100': 'ビーチ.mp3'
         };
 
         let currentBgm = null;
@@ -114,10 +101,9 @@
                 audioCtx.resume();
             }
 
-            let file = bgmFilesJp[stage] || bgmFiles[stage];
+            let file = bgmFiles[stage];
             if (!file) return;
 
-            // 既に同じ曲が鳴っていれば再開
             if (currentBgm && currentBgm.dataset.file === file) {
                 if (currentBgm.paused) {
                     currentBgm.play().catch(e => console.log("BGM再開ブロック:", e));
@@ -125,7 +111,6 @@
                 return;
             }
 
-            // 前の曲を完全に停止・破棄
             stopBGM();
 
             currentBgm = new Audio(file);
@@ -142,7 +127,7 @@
             if (currentBgm) {
                 currentBgm.pause();
                 currentBgm.currentTime = 0;
-                currentBgm.src = ""; // ソースを空にして確実に音を止める
+                currentBgm.src = ""; 
                 currentBgm = null;
             }
         }
@@ -872,7 +857,7 @@
 
         function returnToMap() { 
             gameRunning = false; 
-            stopBGM(); // 確実にBGMをストップ
+            stopBGM(); 
             cancelAnimationFrame(gameLoopId); 
             if(stageTimerInterval) clearInterval(stageTimerInterval); 
             document.getElementById("battleScreen").classList.remove("active"); 
