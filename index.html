@@ -91,6 +91,7 @@
             '9': 'crystal.mp3',
             '10': 'boss.mp3',
             '11': 'boss.mp3',
+            '12': 'boss.mp3',
             '100': 'beach.mp3'
         };
 
@@ -225,7 +226,7 @@
         checkSaveDataIntegrity();
         
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
-        function unlockAllStages() { saveData.maxUnlockedStage = 11; saveData.unlockedUnits = [true, true, true, true, true, true, true]; saveGame(); initStageSelect(); }
+        function unlockAllStages() { saveData.maxUnlockedStage = 12; saveData.unlockedUnits = [true, true, true, true, true, true, true]; saveGame(); initStageSelect(); }
         function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); location.reload(); } }
 
         // --- 隠し機能のカウンター変数 ---
@@ -244,7 +245,7 @@
                 titleEl.innerText = "⚡ パワーアップ (Lv1 ~ 10)";
                 alert("🎉 隠しコマンド成功！ 100,000 XPを手に入れた！");
             } else if (remaining <= 5) {
-                titleEl.innerText = `🔥 ああと ${remaining} 回！`;
+                titleEl.innerText = `🔥 あと ${remaining} 回！`;
             }
         }
 
@@ -292,6 +293,8 @@
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
         let gameRunning = false, activeMonsters = [], activeHeroes = [], projectiles = [], effects = [], currentStage = 1, gameLoopId = null, gameTimer = 0, stageTimerInterval = null, coolDowns = [0, 0, 0, 0, 0, 0, 0];
         let stage10ShockwaveTriggered = false;
+        let stage12ShockwaveTriggered = false;
+        let stage12LastShockwaveTime = 0;
 
         function updateXPStageTimerDisplay() {
             let btn = document.getElementById("xpStageBtn");
@@ -358,7 +361,7 @@
 
             const container = document.getElementById("stageButtonsContainer"); 
             container.innerHTML = ""; 
-            for(let i = 1; i <= 11; i++) { 
+            for(let i = 1; i <= 12; i++) { 
                 let b = document.createElement("button"); 
                 b.className = "stage-btn"; 
                 b.innerText = i <= saveData.maxUnlockedStage ? `ステージ ${i} (${i * 200}XP)` : `ステージ ${i} 🔒`; 
@@ -370,7 +373,7 @@
 
         function openPowerUpScreen() { 
             checkSaveDataIntegrity(); 
-            secretClickCount = 0; // 画面を開くたびにリセット（お好みで）
+            secretClickCount = 0; 
             document.getElementById("secretTitle").innerText = "⚡ パワーアップ (Lv1 ~ 10)";
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("powerUpScreen").classList.add("active"); 
@@ -623,6 +626,11 @@
                     if (sec === 12) spawnEnemy("ダークウルフ");
                     if (sec >= 10 && (sec - 10) % 15 === 0) spawnEnemy("フクロウ教授");
                     break;
+                case 12:
+                    if (sec % 3 === 0) spawnEnemy("守護騎士");
+                    if (sec % 5 === 0) spawnEnemy("弓使い");
+                    if (sec === 10) spawnEnemy("フクロウ教授");
+                    break;
             }
         }
 
@@ -703,6 +711,22 @@
                             activeMonsters.forEach(mon => { mon.x = Math.min(mon.x, 120); });
                             effects.push({ x: 400, y: 200, t: "⚡ 凄まじい衝撃波！ ⚡", life: 50 });
                             spawnEnemy("ダークウルフ");
+                        }
+
+                        // ステージ12の特殊仕様（城を叩いた瞬間＆20秒ごと）
+                        if (currentStage === 12) {
+                            if (!stage12ShockwaveTriggered && enemyCastleHP < maxEnemyCastleHP) {
+                                stage12ShockwaveTriggered = true;
+                                stage12LastShockwaveTime = gameTimer;
+                                activeMonsters.forEach(mon => { mon.x = Math.max(20, mon.x - 150); });
+                                effects.push({ x: 400, y: 200, t: "⚡ 最終ステージの強力な衝撃波！ ⚡", life: 60 });
+                                spawnEnemy("ダークウルフ");
+                            } else if (stage12ShockwaveTriggered && (gameTimer - stage12LastShockwaveTime) >= 20) {
+                                stage12LastShockwaveTime = gameTimer;
+                                activeMonsters.forEach(mon => { mon.x = Math.max(20, mon.x - 150); });
+                                effects.push({ x: 400, y: 200, t: "⚡ 20秒ごとの衝撃波！ ⚡", life: 60 });
+                                spawnEnemy("ダークウルフ");
+                            }
                         }
                     }
                 }
@@ -848,7 +872,7 @@
                 stopBGM();
                 let reward = currentStage * 200;
                 saveData.xp += reward;
-                if (currentStage === saveData.maxUnlockedStage && saveData.maxUnlockedStage < 11) {
+                if (currentStage === saveData.maxUnlockedStage && saveData.maxUnlockedStage < 12) {
                     saveData.maxUnlockedStage++;
                 }
                 saveGame();
@@ -863,6 +887,7 @@
         function startBattle(stageNum) { 
             currentStage = stageNum; 
             stage10ShockwaveTriggered = false;
+            stage12ShockwaveTriggered = false;
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("battleScreen").classList.add("active"); 
             document.getElementById("stageTitle").innerText = (stageNum === 100) ? "💎 XPボーナスステージ" : `ステージ ${stageNum}`; 
@@ -878,6 +903,8 @@
                 enemyCastleHP = 10000;
             } else if (stageNum === 11) {
                 enemyCastleHP = 15000;
+            } else if (stageNum === 12) {
+                enemyCastleHP = 20000;
             } else {
                 enemyCastleHP = (stageNum >= 8 && stageNum !== 100) ? 3300 : 2000;
             }
