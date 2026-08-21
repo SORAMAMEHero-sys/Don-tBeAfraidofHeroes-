@@ -34,7 +34,7 @@
         <!-- XPボーナスステージパネル -->
         <div class="panel" style="border: 2px solid #ffcc00; display: block; margin: 10px auto;">
             <h3 style="color: #ffcc00; margin: 5px;">💎 XPボーナスステージ</h3>
-            <p style="font-size: 12px; margin: 2px; color: #ccc;">城を攻撃してXPを稼げ！(120秒耐久)</p>
+            <p style="font-size: 12px; margin: 2px; color: #ccc;">戦士を倒してXPを稼げ！(120秒耐久)</p>
             <button id="xpStageBtn" onclick="startXPBattle()" class="stage-btn" style="background-color: #e91e63; padding: 8px 16px; font-size: 14px;">💎 XPステージに挑戦！</button>
             <p id="xpTimerText" style="font-size: 12px; margin: 5px; color: #00e676;">いつでも挑戦可能！</p>
         </div>
@@ -189,7 +189,6 @@
             "戦士": { name: "戦士", icon: "⚔️", hp: 120, speed: 1.0, range: 40, atk: 10, isProjectile: false, drop: "atk", dropRate: 0.03, area: false },
             "弓使い": { name: "弓使い", icon: "🏹", hp: 70, speed: 1.1, range: 200, atk: 8, isProjectile: true, drop: null, dropRate: 0, area: false },
             "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15, isProjectile: false, drop: "hp", dropRate: 0.03, area: false },
-            "ハト助": { name: "ハト助", icon: "🐦", hp: 500, speed: 2.0, range: 60, atk: 24, isProjectile: false, drop: "spd", dropRate: 0.03, area: false },
             "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false },
             "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 999999, speed: 1.2, range: 40, atk: 999999, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false },
             "WiFiモンキー": { name: "WiFiモンキー", icon: "🛜🐒", hp: 5000, speed: 1.4, range: 50, atk: 999999, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false, attackInterval: 5.0 }
@@ -463,7 +462,7 @@
         function handleStageWaves(sec) {
             if (currentStage === 100) {
                 if (sec % 1 === 0) spawnEnemy("戦士");
-                if (sec % 10 === 0) spawnEnemy("ハト助");
+                // ハト助は完全に排除！
                 return;
             }
 
@@ -480,11 +479,9 @@
                     break;
                 case 5:
                     if (sec === 5) spawnEnemy("フクロウ教授");
-                    if (sec % 4 === 0) spawnEnemy("ハト助");
                     break;
                 case 6:
                 case 7:
-                    if (sec % 4 === 0) spawnEnemy("ハト助");
                     if (sec % 5 === 0) spawnEnemy("守護騎士");
                     if (sec % 7 === 0) spawnEnemy("弓使い");
                     break;
@@ -493,7 +490,6 @@
                         spawnEnemy("フクロウ教授");
                     }
                     if (sec >= 25) {
-                        if (sec % 6 === 0) spawnEnemy("ハト助");
                         if (sec % 1 === 0) spawnEnemy("弓使い");
                     }
                     if (sec >= 120) {
@@ -503,9 +499,6 @@
                 case 9:
                     if (sec === 25) {
                         spawnEnemy("WiFiモンキー");
-                    }
-                    if (sec % 5 === 0) {
-                        spawnEnemy("ハト助");
                     }
                     break;
             }
@@ -643,7 +636,7 @@
                                 target.hp -= reducedAtk;
                                 effects.push({ x: target.x, y: 330, t: "🛡️", life: 10 });
                             } else {
-                                // ★ ここが今回の修正ポイント！ステージ100（XPステージ）の「戦士」なら攻撃力を1/10にする！
+                                // ステージ100（XPステージ）の戦士なら攻撃力を1/10にする
                                 let finalAtk = (currentStage === 100 && h.name === "戦士") ? (h.atk / 10) : h.atk;
                                 
                                 projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
