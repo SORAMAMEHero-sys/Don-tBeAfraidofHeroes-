@@ -79,9 +79,8 @@
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // BGM設定（※ファイル名が破損・または存在しない場合の対策としてエラーハンドリングを追加）
         const bgmFiles = {
-            '1': 'isakai.mp3',   // 読み込みエラー時の保険として別名や実在パスに調整可能
+            '1': 'isakai.mp3',
             '2': 'isakai.mp3',
             '3': 'yuugata.mp3',
             '4': 'yuugata.mp3',
@@ -94,7 +93,6 @@
             '100': 'beach.mp3'
         };
         
-        // もし元の日本語ファイル名で使いたい場合はこちらに書き換えてね（ファイル名が完全一致しているか要確認）
         const bgmFilesJp = {
             '1': '異世界レシピ.mp3',
             '2': '異世界レシピ.mp3',
@@ -119,7 +117,7 @@
             let file = bgmFilesJp[stage] || bgmFiles[stage];
             if (!file) return;
 
-            // 既に同じ曲が鳴っていれば再생を継続
+            // 既に同じ曲が鳴っていれば再開
             if (currentBgm && currentBgm.dataset.file === file) {
                 if (currentBgm.paused) {
                     currentBgm.play().catch(e => console.log("BGM再開ブロック:", e));
@@ -133,10 +131,10 @@
             currentBgm = new Audio(file);
             currentBgm.dataset.file = file;
             currentBgm.loop = true;
-            currentBgm.volume = 0.5; // 音量調整（必要に応じて 0.0 〜 1.0）
+            currentBgm.volume = 0.5;
             
             currentBgm.play().catch(e => {
-                console.log("BGM自動再生がブロックされました。画面操作後に再生されます。", e);
+                console.log("BGM自動再生ブロック:", e);
             });
         }
 
@@ -144,6 +142,7 @@
             if (currentBgm) {
                 currentBgm.pause();
                 currentBgm.currentTime = 0;
+                currentBgm.src = ""; // ソースを空にして確実に音を止める
                 currentBgm = null;
             }
         }
@@ -860,7 +859,6 @@
             initBattleUI(); 
             gameRunning = true; 
 
-            // 確実にBGMを鳴らす
             playBGM(stageNum);
 
             if(stageTimerInterval) clearInterval(stageTimerInterval); 
@@ -874,7 +872,7 @@
 
         function returnToMap() { 
             gameRunning = false; 
-            stopBGM(); 
+            stopBGM(); // 確実にBGMをストップ
             cancelAnimationFrame(gameLoopId); 
             if(stageTimerInterval) clearInterval(stageTimerInterval); 
             document.getElementById("battleScreen").classList.remove("active"); 
