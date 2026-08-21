@@ -92,6 +92,7 @@
             '10': 'boss.mp3',
             '11': 'hoshizora.mp3',
             '12': 'hoshizora.mp3',
+            '13': 'boss.mp3',
             '100': 'beach.mp3'
         };
 
@@ -225,7 +226,7 @@
         checkSaveDataIntegrity();
         
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
-        function unlockAllStages() { saveData.maxUnlockedStage = 12; saveData.unlockedUnits = [true, true, true, true, true, true, true]; saveGame(); initStageSelect(); }
+        function unlockAllStages() { saveData.maxUnlockedStage = 13; saveData.unlockedUnits = [true, true, true, true, true, true, true]; saveGame(); initStageSelect(); }
         function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); location.reload(); } }
 
         let secretClickCount = 0;
@@ -293,6 +294,7 @@
         let stage10ShockwaveTriggered = false;
         let stage12ShockwaveTriggered = false;
         let stage12LastShockwaveTime = 0;
+        let stage13ShockwaveTriggered = false;
 
         function updateXPStageTimerDisplay() {
             let btn = document.getElementById("xpStageBtn");
@@ -359,7 +361,7 @@
 
             const container = document.getElementById("stageButtonsContainer"); 
             container.innerHTML = ""; 
-            for(let i = 1; i <= 12; i++) { 
+            for(let i = 1; i <= 13; i++) { 
                 let b = document.createElement("button"); 
                 b.className = "stage-btn"; 
                 b.innerText = i <= saveData.maxUnlockedStage ? `ステージ ${i} (${i * 200}XP)` : `ステージ ${i} 🔒`; 
@@ -560,6 +562,7 @@
                 let customAtk = template.atk;
                 if (currentStage === 6) { customHp *= 0.7; }
                 if (currentStage === 7) { customHp *= 1.5; }
+                if (currentStage === 13) { customHp *= 1.8; customAtk *= 1.2; }
 
                 activeHeroes.push({ ...template, x: 730, hp: customHp, maxHp: customHp, atk: customAtk, attackTimer: 0 });
                 if (template.isBoss) { playSound("boss"); }
@@ -628,6 +631,13 @@
                     if (sec % 3 === 0) spawnEnemy("守護騎士");
                     if (sec % 5 === 0) spawnEnemy("弓使い");
                     if (sec === 10) spawnEnemy("フクロウ教授");
+                    break;
+                case 13:
+                    // 始まって1秒でWiFiモンキー、10秒ごとにWiFiモンキー増援
+                    if (sec === 1 || (sec > 1 && (sec - 1) % 10 === 0)) {
+                        spawnEnemy("WiFiモンキー");
+                    }
+                    if (sec % 4 === 0) spawnEnemy("守護騎士");
                     break;
             }
         }
@@ -724,6 +734,14 @@
                                 effects.push({ x: 400, y: 200, t: "⚡ 20秒ごとの衝撃波！ ⚡", life: 60 });
                                 spawnEnemy("ダークウルフ");
                             }
+                        }
+
+                        // ステージ13の城を叩いたときの衝撃波 ＆ ダークウルフ出撃
+                        if (currentStage === 13 && !stage13ShockwaveTriggered && enemyCastleHP < maxEnemyCastleHP) {
+                            stage13ShockwaveTriggered = true;
+                            activeMonsters.forEach(mon => { mon.x = Math.max(20, mon.x - 180); });
+                            effects.push({ x: 400, y: 200, t: "⚡ 狂気の地獄衝撃波！！ ⚡", life: 70 });
+                            spawnEnemy("ダークウルフ");
                         }
                     }
                 }
@@ -869,7 +887,7 @@
                 stopBGM();
                 let reward = currentStage * 200;
                 saveData.xp += reward;
-                if (currentStage === saveData.maxUnlockedStage && saveData.maxUnlockedStage < 12) {
+                if (currentStage === saveData.maxUnlockedStage && saveData.maxUnlockedStage < 13) {
                     saveData.maxUnlockedStage++;
                 }
                 saveGame();
@@ -885,6 +903,8 @@
             currentStage = stageNum; 
             stage10ShockwaveTriggered = false;
             stage12ShockwaveTriggered = false;
+            stage13ShockwaveTriggered = false;
+
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("battleScreen").classList.add("active"); 
             document.getElementById("stageTitle").innerText = (stageNum === 100) ? "💎 XPボーナスステージ" : `ステージ ${stageNum}`; 
@@ -902,6 +922,8 @@
                 enemyCastleHP = 15000;
             } else if (stageNum === 12) {
                 enemyCastleHP = 20000;
+            } else if (stageNum === 13) {
+                enemyCastleHP = 35000; // ステージ13の城は超頑丈！
             } else {
                 enemyCastleHP = (stageNum >= 8 && stageNum !== 100) ? 3300 : 2000;
             }
