@@ -88,10 +88,10 @@
             '6': 'yuugata.mp3',
             '7': 'beach.mp3',
             '8': 'hoshizora.mp3',
-            '9': 'crystal.mp3',
+            '9': 'hoshizora.mp3',
             '10': 'boss.mp3',
-            '11': 'boss.mp3',
-            '12': 'boss.mp3',
+            '11': 'hoshizora.mp3',
+            '12': 'hoshizora.mp3',
             '100': 'beach.mp3'
         };
 
@@ -191,7 +191,6 @@
             return bgImages["ステージ8以降"];
         }
 
-        // --- 安全なセーブデータ読み込み ---
         const SAVE_KEY = "monsterGameSave_v1";
         let saveData = null;
         try {
@@ -229,7 +228,6 @@
         function unlockAllStages() { saveData.maxUnlockedStage = 12; saveData.unlockedUnits = [true, true, true, true, true, true, true]; saveGame(); initStageSelect(); }
         function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); location.reload(); } }
 
-        // --- 隠し機能のカウンター変数 ---
         let secretClickCount = 0;
 
         function handleSecretClick() {
@@ -713,7 +711,6 @@
                             spawnEnemy("ダークウルフ");
                         }
 
-                        // ステージ12の特殊仕様（城を叩いた瞬間＆20秒ごと）
                         if (currentStage === 12) {
                             if (!stage12ShockwaveTriggered && enemyCastleHP < maxEnemyCastleHP) {
                                 stage12ShockwaveTriggered = true;
