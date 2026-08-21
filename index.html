@@ -189,12 +189,12 @@
             return bgImages["ステージ8以降"];
         }
 
-        const SAVE_KEY = "monsterGameSave_v2";
-        const OLD_SAVE_KEY = "monsterGameSave_v1"; // 旧キーの候補があればここから読み込みを試す
+        // 以前お使いだった古いセーブキー（monsterGameSave）を最優先で読み込みます
+        const SAVE_KEY = "monsterGameSave";
         
         let loadedData = null;
         try {
-            loadedData = JSON.parse(localStorage.getItem(SAVE_KEY)) || JSON.parse(localStorage.getItem("monsterGameSave")) || JSON.parse(localStorage.getItem(OLD_SAVE_KEY));
+            loadedData = JSON.parse(localStorage.getItem(SAVE_KEY)) || JSON.parse(localStorage.getItem("monsterGameSave_v2"));
         } catch(e) {
             loadedData = null;
         }
@@ -215,12 +215,16 @@
             if (!saveData.evolved || saveData.evolved.length < 7) while(saveData.evolved.length < 7) saveData.evolved.push(false);
             if (!saveData.materials) saveData.materials = { atk: 0, hp: 0, spd: 0 };
             if (saveData.xpStageAvailableTime === undefined) saveData.xpStageAvailableTime = 0;
+            // ニードラットの枠がない場合の安全対策
+            if (saveData.levels.length < 7) saveData.levels.push(1);
+            if (saveData.unlockedUnits.length < 7) saveData.unlockedUnits.push(false);
+            if (saveData.evolved.length < 7) saveData.evolved.push(false);
         }
         checkSaveDataIntegrity();
         
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
         function unlockAllStages() { saveData.maxUnlockedStage = 10; saveData.unlockedUnits = [true, true, true, true, true, true, true]; saveGame(); initStageSelect(); }
-        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); localStorage.removeItem("monsterGameSave"); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true, false], evolved: [false, false, false, false, false, false, false], materials: { atk: 0, hp: 0, spd: 0 }, xpStageAvailableTime: 0 }; initStageSelect(); } }
+        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); localStorage.removeItem("monsterGameSave_v2"); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true, false], evolved: [false, false, false, false, false, false, false], materials: { atk: 0, hp: 0, spd: 0 }, xpStageAvailableTime: 0 }; initStageSelect(); } }
 
         const monsters = [
             { 
