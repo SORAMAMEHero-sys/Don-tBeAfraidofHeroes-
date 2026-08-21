@@ -80,49 +80,28 @@
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         const bgmFiles = {
-            '1': 'isakai.mp3',
-            '2': 'isakai.mp3',
-            '3': 'yuugata.mp3',
-            '4': 'yuugata.mp3',
-            '5': 'yuugata.mp3',
-            '6': 'yuugata.mp3',
-            '7': 'beach.mp3',
-            '8': 'hoshizora.mp3',
-            '9': 'hoshizora.mp3',
-            '10': 'boss.mp3',
-            '11': 'hoshizora.mp3',
-            '12': 'hoshizora.mp3',
-            '13': 'boss.mp3',
-            '100': 'beach.mp3'
+            '1': 'isakai.mp3', '2': 'isakai.mp3', '3': 'yuugata.mp3', '4': 'yuugata.mp3',
+            '5': 'yuugata.mp3', '6': 'yuugata.mp3', '7': 'beach.mp3', '8': 'hoshizora.mp3',
+            '9': 'hoshizora.mp3', '10': 'boss.mp3', '11': 'hoshizora.mp3', '12': 'hoshizora.mp3',
+            '13': 'boss.mp3', '100': 'beach.mp3'
         };
 
         let currentBgm = null;
 
         function playBGM(stage) {
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-
+            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
             let file = bgmFiles[stage];
             if (!file) return;
-
             if (currentBgm && currentBgm.dataset.file === file) {
-                if (currentBgm.paused) {
-                    currentBgm.play().catch(e => console.log("BGM再開ブロック:", e));
-                }
+                if (currentBgm.paused) { currentBgm.play().catch(e => console.log("BGM再開ブロック:", e)); }
                 return;
             }
-
             stopBGM();
-
             currentBgm = new Audio(file);
             currentBgm.dataset.file = file;
             currentBgm.loop = true;
             currentBgm.volume = 0.5;
-            
-            currentBgm.play().catch(e => {
-                console.log("BGM自動再生ブロック:", e);
-            });
+            currentBgm.play().catch(e => console.log("BGM自動再生ブロック:", e));
         }
 
         function stopBGM() {
@@ -149,33 +128,27 @@
                 osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
                 gainNode.gain.setValueAtTime(0.2, now);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now);
-                osc.stop(now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
             } else if (type === "boss") {
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(150, now);
                 osc.frequency.setValueAtTime(100, now + 0.15);
                 gainNode.gain.setValueAtTime(0.3, now);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-                osc.start(now);
-                osc.stop(now + 0.4);
+                osc.start(now); osc.stop(now + 0.4);
             } else if (type === "defeat") {
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(800, now);
                 osc.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
                 gainNode.gain.setValueAtTime(0.15, now);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-                osc.start(now);
-                osc.stop(now + 0.08);
+                osc.start(now); osc.stop(now + 0.08);
             }
         }
 
         const bgImages = {
-            "朝の森": new Image(),
-            "夕方の森": new Image(),
-            "夜の森": new Image(),
-            "ビーチ": new Image(),
-            "ステージ8以降": new Image()
+            "朝の森": new Image(), "夕方の森": new Image(), "夜の森": new Image(),
+            "ビーチ": new Image(), "ステージ8以降": new Image()
         };
         bgImages["朝の森"].src = "IMG_2435.jpeg";
         bgImages["夕方の森"].src = "IMG_2436.jpeg";
@@ -196,17 +169,12 @@
         let saveData = null;
         try {
             const rawData = localStorage.getItem(SAVE_KEY);
-            if (rawData) {
-                saveData = JSON.parse(rawData);
-            }
-        } catch (e) {
-            console.log("セーブデータ解析失敗のため初期化します");
-        }
+            if (rawData) saveData = JSON.parse(rawData);
+        } catch (e) { console.log("セーブデータ解析失敗のため初期化します"); }
 
         if (!saveData) {
             saveData = { 
-                maxUnlockedStage: 1, 
-                xp: 0, 
+                maxUnlockedStage: 1, xp: 0, 
                 levels: [1, 1, 1, 1, 1, 1, 1], 
                 unlockedUnits: [true, true, true, false, true, true, false],
                 evolved: [false, false, false, false, false, false, false],
@@ -230,12 +198,10 @@
         function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); location.reload(); } }
 
         let secretClickCount = 0;
-
         function handleSecretClick() {
             secretClickCount++;
             let remaining = 20 - secretClickCount;
             let titleEl = document.getElementById("secretTitle");
-
             if (secretClickCount >= 20) {
                 saveData.xp += 100000;
                 saveGame();
@@ -249,34 +215,13 @@
         }
 
         const monsters = [
-            { 
-                name: "スライム", evolveName: "スクイーズ", icon: "🟢", evolveIcon: "🔵", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false, skill: null,
-                hasEvolve: true, evolveCostXp: 10000, evolveReq: { hp: 5 }
-            },
-            { 
-                name: "ゾンビ", evolveName: "ボス・ゾンビ", icon: "🧟", evolveIcon: "🧟‍♂️", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false, skill: null,
-                hasEvolve: true, evolveCostXp: 10000, evolveReq: { spd: 2, hp: 3 }
-            },
-            { 
-                name: "ボマー", evolveName: "ヌクレアスボマー", icon: "💣", evolveIcon: "💥", cost: 200, cd: 6.0, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true, skill: null,
-                hasEvolve: true, evolveCostXp: 10000, evolveReq: { atk: 10 }
-            },
-            { 
-                name: "タンクムーン", evolveName: "シャールサン", icon: "🌝", evolveIcon: "🌕", cost: 300, cd: 4.0, baseHp: 700, speed: 0.4, range: 40, baseAtk: 1, area: false, skill: { name: "高速敵ダメージ軽減", desc: "移動速度2.0以上の敵からのダメージを85%軽減" },
-                hasEvolve: true, evolveCostXp: 100000, evolveReq: { hp: 20 }
-            },
-            { 
-                name: "スズメバチ", evolveName: "オオスズメバチ", icon: "🐝", evolveIcon: "🐝", cost: 500, cd: 5.0, baseHp: 100, speed: 3.0, range: 150, baseAtk: 30, area: true, skill: { name: "飛び道具無効", desc: "弓使いなどの遠距離攻撃を完全に無効化する" },
-                hasEvolve: true, evolveCostXp: 100000, evolveReq: { spd: 20 }
-            },
-            { 
-                name: "ドラゴン", evolveName: "ヒドラゴラゴン", icon: "🐉", evolveIcon: "🐲", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true, skill: null,
-                hasEvolve: true, evolveCostXp: 350000, evolveReq: { hp: 20, atk: 20, spd: 20 }
-            },
-            { 
-                name: "ニードラット", evolveName: "ポイズント", icon: "🦔", evolveIcon: "🐁", cost: 1200, cd: 12.0, baseHp: 200, speed: 8.5, range: 40, baseAtk: 250, area: false, skill: null,
-                hasEvolve: true, evolveCostXp: 50000, evolveReq: { atk: 20 }
-            }
+            { name: "スライム", evolveName: "スクイーズ", icon: "🟢", evolveIcon: "🔵", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false, skill: null, hasEvolve: true, evolveCostXp: 10000, evolveReq: { hp: 5 } },
+            { name: "ゾンビ", evolveName: "ボス・ゾンビ", icon: "🧟", evolveIcon: "🧟‍♂️", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false, skill: null, hasEvolve: true, evolveCostXp: 10000, evolveReq: { spd: 2, hp: 3 } },
+            { name: "ボマー", evolveName: "ヌクレアスボマー", icon: "💣", evolveIcon: "💥", cost: 200, cd: 6.0, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true, skill: null, hasEvolve: true, evolveCostXp: 10000, evolveReq: { atk: 10 } },
+            { name: "タンクムーン", evolveName: "シャールサン", icon: "🌝", evolveIcon: "🌕", cost: 300, cd: 4.0, baseHp: 700, speed: 0.4, range: 40, baseAtk: 1, area: false, skill: { name: "高速敵ダメージ軽減", desc: "移動速度2.0以上の敵からのダメージを85%軽減" }, hasEvolve: true, evolveCostXp: 100000, evolveReq: { hp: 20 } },
+            { name: "スズメバチ", evolveName: "オオスズメバチ", icon: "🐝", evolveIcon: "🐝", cost: 500, cd: 5.0, baseHp: 100, speed: 3.0, range: 150, baseAtk: 30, area: true, skill: { name: "飛び道具無効", desc: "弓使いなどの遠距離攻撃を完全に無効化する" }, hasEvolve: true, evolveCostXp: 100000, evolveReq: { spd: 20 } },
+            { name: "ドラゴン", evolveName: "ヒドラゴラゴン", icon: "🐉", evolveIcon: "🐲", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true, skill: null, hasEvolve: true, evolveCostXp: 350000, evolveReq: { hp: 20, atk: 20, spd: 20 } },
+            { name: "ニードラット", evolveName: "ポイズント", icon: "🦔", evolveIcon: "🐁", cost: 1200, cd: 12.0, baseHp: 200, speed: 8.5, range: 40, baseAtk: 250, area: false, skill: null, hasEvolve: true, evolveCostXp: 50000, evolveReq: { atk: 20 } }
         ];
         
         const enemyTemplates = {
@@ -300,7 +245,6 @@
             let btn = document.getElementById("xpStageBtn");
             let txt = document.getElementById("xpTimerText");
             if (!btn || !txt) return;
-            
             let now = Date.now();
             if (saveData.xpStageAvailableTime && now < saveData.xpStageAvailableTime) {
                 let diffSec = Math.ceil((saveData.xpStageAvailableTime - now) / 1000);
@@ -388,11 +332,7 @@
                 let div = document.createElement("div"); 
                 div.style.cssText = "background: rgba(255,255,255,0.05); padding: 10px; margin: 6px auto; max-width: 400px; border-radius: 8px; text-align: left;"; 
                 
-                let skillHtml = "";
-                if (m.skill) {
-                    skillHtml = `<div style="font-size: 12px; color: #ffcc00; margin-top: 4px;">✨スキル: ${m.skill.name} - ${m.skill.desc}</div>`;
-                }
-
+                let skillHtml = m.skill ? `<div style="font-size: 12px; color: #ffcc00; margin-top: 4px;">✨スキル: ${m.skill.name} - ${m.skill.desc}</div>` : "";
                 let currentName = isEvolved ? m.evolveName : m.name;
                 let currentIcon = isEvolved ? m.evolveIcon : m.icon;
 
@@ -416,18 +356,8 @@
                 } else {
                     let cost = lvl * 100;
                     let canEvolve = (lvl >= 10 && m.hasEvolve);
-                    
-                    let evolveText = "";
-                    if (lvl >= 10 && m.hasEvolve) {
-                        evolveText = `<span style="font-size: 11px; color: #00e676; margin-left: 6px;">第2形態あり</span>`;
-                    }
-
-                    let rightButtonHtml = "";
-                    if (canEvolve) {
-                        rightButtonHtml = `<button class="evolve-btn" onclick="evolveUnit(${i})">進化</button>`;
-                    } else {
-                        rightButtonHtml = `<button class="up-btn" onclick="upgradeUnit(${i})" ${lvl >= 10 ? "disabled style='background:#555;'" : ""}>${lvl >= 10 ? "MAX" : `強化(${cost}XP)`}</button>`;
-                    }
+                    let evolveText = (lvl >= 10 && m.hasEvolve) ? `<span style="font-size: 11px; color: #00e676; margin-left: 6px;">第2形態あり</span>` : "";
+                    let rightButtonHtml = canEvolve ? `<button class="evolve-btn" onclick="evolveUnit(${i})">進化</button>` : `<button class="up-btn" onclick="upgradeUnit(${i})" ${lvl >= 10 ? "disabled style='background:#555;'" : ""}>${lvl >= 10 ? "MAX" : `強化(${cost}XP)`}</button>`;
 
                     div.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -451,9 +381,7 @@
                 saveData.unlockedUnits[index] = true;
                 saveGame();
                 openPowerUpScreen();
-            } else {
-                alert(`XPが足りません！（${cost}XP必要です）`);
-            }
+            } else { alert(`XPが足りません！（${cost}XP必要です）`); }
         }
 
         function closePowerUpScreen() { 
@@ -471,33 +399,17 @@
                 saveData.levels[index]++; 
                 saveGame(); 
                 openPowerUpScreen(); 
-            } else if (lvl >= 10) {
-                alert("すでに最大レベルです！");
-            } else {
-                alert("XPが足りません！");
-            }
+            } else if (lvl >= 10) { alert("すでに最大レベルです！"); } 
+            else { alert("XPが足りません！"); }
         }
 
         function evolveUnit(index) {
             let m = monsters[index];
             let req = m.evolveReq;
-            
-            if (saveData.xp < m.evolveCostXp) {
-                alert(`XPが足りません！（${m.evolveCostXp}XP必要です）`);
-                return;
-            }
-            if (req.hp && saveData.materials.hp < req.hp) {
-                alert(`体力の心得が足りません！（必要: ${req.hp}個）`);
-                return;
-            }
-            if (req.atk && saveData.materials.atk < req.atk) {
-                alert(`攻撃力の心得が足りません！（必要: ${req.atk}個）`);
-                return;
-            }
-            if (req.spd && saveData.materials.spd < req.spd) {
-                alert(`速度の心得が足りません！（必要: ${req.spd}個）`);
-                return;
-            }
+            if (saveData.xp < m.evolveCostXp) { alert(`XPが足りません！（${m.evolveCostXp}XP必要です）`); return; }
+            if (req.hp && saveData.materials.hp < req.hp) { alert(`体力の心得が足りません！（必要: ${req.hp}個）`); return; }
+            if (req.atk && saveData.materials.atk < req.atk) { alert(`攻撃力の心得が足りません！（必要: ${req.atk}個）`); return; }
+            if (req.spd && saveData.materials.spd < req.spd) { alert(`速度の心得が足りません！（必要: ${req.spd}個）`); return; }
 
             saveData.xp -= m.evolveCostXp;
             if (req.hp) saveData.materials.hp -= req.hp;
@@ -526,8 +438,7 @@
         }
 
         function spawnMonster(index) { 
-            if (!saveData.unlockedUnits[index]) return;
-            if (coolDowns[index] > 0) return; 
+            if (!saveData.unlockedUnits[index] || coolDowns[index] > 0) return; 
             let m = monsters[index]; 
             if (money >= m.cost) { 
                 money -= m.cost; 
@@ -606,13 +517,8 @@
                     break;
                 case 9:
                     if (sec === 5) spawnEnemy("守護騎士");
-                    if (sec === 15) {
-                        spawnEnemy("フクロウ教授");
-                        spawnEnemy("弓使い");
-                    }
-                    if (sec === 25) {
-                        spawnEnemy("WiFiモンキー");
-                    }
+                    if (sec === 15) { spawnEnemy("フクロウ教授"); spawnEnemy("弓使い"); }
+                    if (sec === 25) { spawnEnemy("WiFiモンキー"); }
                     if (sec >= 30) {
                         if (sec % 2 === 0) spawnEnemy("戦士");
                         if (sec % 4 === 0) spawnEnemy("守護騎士");
@@ -633,7 +539,7 @@
                     if (sec === 10) spawnEnemy("フクロウ教授");
                     break;
                 case 13:
-                    // 始まって1秒でWiFiモンキー、10秒ごとにWiFiモンキー増援
+                    // ステージ13: 1秒でWiFiモンキー、以降10秒ごとにWiFiモンキー増援
                     if (sec === 1 || (sec > 1 && (sec - 1) % 10 === 0)) {
                         spawnEnemy("WiFiモンキー");
                     }
@@ -714,6 +620,7 @@
                     } else {
                         enemyCastleHP -= 1.8;
                         
+                        // ステージ10の衝撃波
                         if (currentStage === 10 && !stage10ShockwaveTriggered && enemyCastleHP < maxEnemyCastleHP) {
                             stage10ShockwaveTriggered = true;
                             activeMonsters.forEach(mon => { mon.x = Math.min(mon.x, 120); });
@@ -721,6 +628,7 @@
                             spawnEnemy("ダークウルフ");
                         }
 
+                        // ステージ12の衝撃波
                         if (currentStage === 12) {
                             if (!stage12ShockwaveTriggered && enemyCastleHP < maxEnemyCastleHP) {
                                 stage12ShockwaveTriggered = true;
@@ -784,11 +692,7 @@
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
                     if (target) {
                         effects.push({ x: h.x, y: 330, t: "💥", life: 15 });
-                        activeMonsters.forEach(m => {
-                            if (Math.abs(m.x - h.x) < 100) {
-                                m.hp -= h.atk;
-                            }
-                        });
+                        activeMonsters.forEach(m => { if (Math.abs(m.x - h.x) < 100) m.hp -= h.atk; });
                     } else if (h.x > 70) {
                         h.x -= h.speed;
                     } else {
@@ -810,7 +714,6 @@
                                 effects.push({ x: target.x, y: 330, t: "🛡️", life: 10 });
                             } else {
                                 let finalAtk = (currentStage === 100 && h.name === "戦士") ? (h.atk / 10) : h.atk;
-                                
                                 projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
                                 target.hp -= finalAtk; 
                             }
@@ -844,9 +747,7 @@
             activeMonsters = activeMonsters.filter(m => m.hp > 0);
             activeHeroes = activeHeroes.filter(h => h.hp > 0);
             
-            if (activeHeroes.length < initialEnemyCount) {
-                playSound("defeat"); 
-            }
+            if (activeHeroes.length < initialEnemyCount) { playSound("defeat"); }
 
             projectiles.forEach(p => {
                 ctx.fillStyle = p.col;
@@ -912,21 +813,13 @@
             money = 150; 
             playerCastleHP = 1000; 
             
-            if (stageNum === 7) {
-                enemyCastleHP = 5000;
-            } else if (stageNum === 9) {
-                enemyCastleHP = 6600;
-            } else if (stageNum === 10) {
-                enemyCastleHP = 10000;
-            } else if (stageNum === 11) {
-                enemyCastleHP = 15000;
-            } else if (stageNum === 12) {
-                enemyCastleHP = 20000;
-            } else if (stageNum === 13) {
-                enemyCastleHP = 35000; // ステージ13の城は超頑丈！
-            } else {
-                enemyCastleHP = (stageNum >= 8 && stageNum !== 100) ? 3300 : 2000;
-            }
+            if (stageNum === 7) { enemyCastleHP = 5000; } 
+            else if (stageNum === 9) { enemyCastleHP = 6600; } 
+            else if (stageNum === 10) { enemyCastleHP = 10000; } 
+            else if (stageNum === 11) { enemyCastleHP = 15000; } 
+            else if (stageNum === 12) { enemyCastleHP = 20000; } 
+            else if (stageNum === 13) { enemyCastleHP = 35000; } 
+            else { enemyCastleHP = (stageNum >= 8 && stageNum !== 100) ? 3300 : 2000; }
             maxEnemyCastleHP = enemyCastleHP; 
 
             activeMonsters = []; 
