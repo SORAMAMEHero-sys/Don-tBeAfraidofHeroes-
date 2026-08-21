@@ -58,7 +58,7 @@
     <!-- パワーアップ画面 -->
     <div id="powerUpScreen" class="screen">
         <div class="panel">
-            <h2>⚡ パワーアップ (Lv1 ~ 10)</h2>
+            <h2 id="secretTitle" style="cursor: pointer; user-select: none;" onclick="handleSecretClick()">⚡ パワーアップ (Lv1 ~ 10)</h2>
             <p style="font-size: 18px;">所持XP: <span id="totalXpUp" style="color: #ffcc00; font-weight: bold;">0</span> XP</p>
         </div>
         <div id="powerUpList"></div>
@@ -228,6 +228,26 @@
         function unlockAllStages() { saveData.maxUnlockedStage = 11; saveData.unlockedUnits = [true, true, true, true, true, true, true]; saveGame(); initStageSelect(); }
         function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); location.reload(); } }
 
+        // --- 隠し機能のカウンター変数 ---
+        let secretClickCount = 0;
+
+        function handleSecretClick() {
+            secretClickCount++;
+            let remaining = 20 - secretClickCount;
+            let titleEl = document.getElementById("secretTitle");
+
+            if (secretClickCount >= 20) {
+                saveData.xp += 100000;
+                saveGame();
+                document.getElementById("totalXpUp").innerText = saveData.xp;
+                secretClickCount = 0;
+                titleEl.innerText = "⚡ パワーアップ (Lv1 ~ 10)";
+                alert("🎉 隠しコマンド成功！ 100,000 XPを手に入れた！");
+            } else if (remaining <= 5) {
+                titleEl.innerText = `🔥 ああと ${remaining} 回！`;
+            }
+        }
+
         const monsters = [
             { 
                 name: "スライム", evolveName: "スクイーズ", icon: "🟢", evolveIcon: "🔵", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false, skill: null,
@@ -350,6 +370,8 @@
 
         function openPowerUpScreen() { 
             checkSaveDataIntegrity(); 
+            secretClickCount = 0; // 画面を開くたびにリセット（お好みで）
+            document.getElementById("secretTitle").innerText = "⚡ パワーアップ (Lv1 ~ 10)";
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("powerUpScreen").classList.add("active"); 
             document.getElementById("totalXpUp").innerText = saveData.xp; 
