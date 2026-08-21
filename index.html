@@ -31,6 +31,14 @@
             <button onclick="openPowerUpScreen()" style="background-color: #2196F3; color: white;">💪 パワーアップ画面</button>
         </div>
         
+        <!-- XPボーナスステージパネル -->
+        <div class="panel" style="border: 2px solid #ffcc00; display: block; margin: 10px auto;">
+            <h3 style="color: #ffcc00; margin: 5px;">💎 XPボーナスステージ</h3>
+            <p style="font-size: 12px; margin: 2px; color: #ccc;">城を攻撃してXPを稼げ！(120秒耐久)</p>
+            <button id="xpStageBtn" onclick="startXPBattle()" class="stage-btn" style="background-color: #e91e63; padding: 8px 16px; font-size: 14px;">💎 XPステージに挑戦！</button>
+            <p id="xpTimerText" style="font-size: 12px; margin: 5px; color: #00e676;">いつでも挑戦可能！</p>
+        </div>
+
         <!-- 素材インベントリ -->
         <div class="inventory-panel">
             <div style="font-weight: bold; color: #ffcc00; margin-bottom: 4px;">🎒 素材インベントリ</div>
@@ -119,6 +127,7 @@
         bgImages["ビーチ"].src = "IMG_2439.jpeg";
 
         function getBgImageByStage(stage) {
+            if (stage === 100) return bgImages["朝の森"];
             if (stage <= 2) return bgImages["朝の森"];
             if (stage <= 4) return bgImages["夕方の森"];
             if (stage <= 6) return bgImages["夜の森"];
@@ -132,7 +141,8 @@
             levels: [1, 1, 1, 1, 1, 1], 
             unlockedUnits: [true, true, true, false, true, true],
             evolved: [false, false, false, false, false, false],
-            materials: { atk: 0, hp: 0, spd: 0 }
+            materials: { atk: 0, hp: 0, spd: 0 },
+            xpStageAvailableTime: 0
         };
         
         function checkSaveDataIntegrity() { 
@@ -140,12 +150,13 @@
             if (!saveData.unlockedUnits || saveData.unlockedUnits.length < 6) saveData.unlockedUnits = [true, true, true, false, true, true]; 
             if (!saveData.evolved) saveData.evolved = [false, false, false, false, false, false];
             if (!saveData.materials) saveData.materials = { atk: 0, hp: 0, spd: 0 };
+            if (saveData.xpStageAvailableTime === undefined) saveData.xpStageAvailableTime = 0;
         }
         checkSaveDataIntegrity();
         
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
         function unlockAllStages() { saveData.maxUnlockedStage = 9; saveData.unlockedUnits = [true, true, true, true, true, true]; saveGame(); initStageSelect(); }
-        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true], evolved: [false, false, false, false, false, false], materials: { atk: 0, hp: 0, spd: 0 } }; initStageSelect(); } }
+        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true], evolved: [false, false, false, false, false, false], materials: { atk: 0, hp: 0, spd: 0 }, xpStageAvailableTime: 0 }; initStageSelect(); } }
 
         const monsters = [
             { 
@@ -187,6 +198,37 @@
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
         let gameRunning = false, activeMonsters = [], activeHeroes = [], projectiles = [], effects = [], currentStage = 1, gameLoopId = null, gameTimer = 0, stageTimerInterval = null, coolDowns = [0, 0, 0, 0, 0, 0];
 
+        // XPステージのタイマー表示更新
+        function updateXPStageTimerDisplay() {
+            let btn = document.getElementById("xpStageBtn");
+            let txt = document.getElementById("xpTimerText");
+            if (!btn || !txt) return;
+            
+            let now = Date.now();
+            if (saveData.xpStageAvailableTime && now < saveData.xpStageAvailableTime) {
+                let diffSec = Math.ceil((saveData.xpStageAvailableTime - now) / 1000);
+                let min = Math.floor(diffSec / 60);
+                let sec = diffSec % 60;
+                btn.disabled = true;
+                btn.style.backgroundColor = "#555";
+                txt.innerText = `⏳ 再挑戦まであと ${min}分${sec}秒`;
+            } else {
+                btn.disabled = false;
+                btn.style.backgroundColor = "#e91e63";
+                txt.innerText = "✨ いつでも挑戦可能！";
+            }
+        }
+        setInterval(updateXPStageTimerDisplay, 1000);
+
+        function startXPBattle() {
+            let now = Date.now();
+            if (saveData.xpStageAvailableTime && now < saveData.xpStageAvailableTime) {
+                alert("まだ準備中です！");
+                return;
+            }
+            startBattle(100);
+        }
+
         setInterval(() => {
             if (!gameRunning) return;
             monsters.forEach((m, i) => {
@@ -218,6 +260,7 @@
             document.getElementById("inv-atk").innerText = saveData.materials.atk;
             document.getElementById("inv-hp").innerText = saveData.materials.hp;
             document.getElementById("inv-spd").innerText = saveData.materials.spd;
+            updateXPStageTimerDisplay();
 
             const container = document.getElementById("stageButtonsContainer"); 
             container.innerHTML = ""; 
@@ -419,6 +462,13 @@
         }
 
         function handleStageWaves(sec) {
+            if (currentStage === 100) {
+                // XPステージ用ウェーブ：1秒ごとに戦士、10秒ごとにハト助
+                if (sec % 1 === 0) spawnEnemy("戦士");
+                if (sec % 10 === 0) spawnEnemy("ハト助");
+                return;
+            }
+
             switch(currentStage) {
                 case 1:
                 case 2:
@@ -519,6 +569,7 @@
             ctx.fillStyle = "#555"; ctx.fillRect(710, 245, bw, bh); 
             ctx.fillStyle = "#e74c3c"; ctx.fillRect(710, 245, bw * Math.max(0, enemyCastleHP / maxEnemyCastleHP), bh);
 
+            // 味方モンスター描画・挙動
             activeMonsters.forEach((m) => {
                 let target = activeHeroes.find(h => Math.abs(h.x - m.x) < m.range);
                 let currentIcon = m.evolved ? m.evolveIcon : m.icon;
@@ -534,13 +585,23 @@
                 } else if (m.x < 700) {
                     m.x += m.speed; 
                 } else {
-                    enemyCastleHP -= 0.6;
+                    // 城に到達したときの処理
+                    if (currentStage === 100) {
+                        // XPステージなら城を叩くごとに100XP獲得
+                        saveData.xp += 100;
+                        document.getElementById("totalXp").innerText = saveData.xp;
+                        effects.push({ x: 720, y: 280, t: "+100XP!", life: 15 });
+                        m.hp = 0; // 攻撃したら消える仕様
+                    } else {
+                        enemyCastleHP -= 0.6;
+                    }
                 }
                 drawCharacter(ctx, currentIcon, m.x, 340);
             });
 
             let initialEnemyCount = activeHeroes.length;
 
+            // 敵キャラクター描画・挙動
             activeHeroes.forEach((h) => {
                 if (h.name === "WiFiモンキー") {
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
@@ -581,7 +642,7 @@
                             if (h.isProjectile && target.name === "スズメバチ" && target.skill) {
                                 effects.push({ x: target.x, y: 330, t: "🛡️", life: 15 }); 
                             } else if (target.name === "タンクムーン" && h.speed >= 2.0) {
-                                let reducedAtk = h.atk * 0.15; // 85%軽減 (残りのダメージは15%)
+                                let reducedAtk = h.atk * 0.15; // 85%軽減
                                 projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
                                 target.hp -= reducedAtk;
                                 effects.push({ x: target.x, y: 330, t: "🛡️", life: 10 });
@@ -631,13 +692,26 @@
             });
             effects = effects.filter(e => e.life > 0);
 
+            // XPステージの特殊勝利判定（120秒耐え抜く）
+            if (currentStage === 100) {
+                enemyCastleHP = maxEnemyCastleHP; // 城無敵
+                if (gameTimer >= 120) {
+                    gameRunning = false;
+                    saveData.xpStageAvailableTime = Date.now() + (15 * 60 * 1000); // 15分クールダウン
+                    saveGame();
+                    alert("120秒耐久成功！XPボーナス獲得！");
+                    returnToMap();
+                    return;
+                }
+            }
+
             if (playerCastleHP <= 0) {
                 gameRunning = false;
                 alert("敗北しました...");
                 returnToMap();
                 return;
             }
-            if (enemyCastleHP <= 0) {
+            if (currentStage !== 100 && enemyCastleHP <= 0) {
                 gameRunning = false;
                 let reward = currentStage * 200;
                 saveData.xp += reward;
@@ -657,10 +731,10 @@
             currentStage = stageNum; 
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("battleScreen").classList.add("active"); 
-            document.getElementById("stageTitle").innerText = `ステージ ${stageNum}`; 
+            document.getElementById("stageTitle").innerText = stageNum === 100 ? "💎 XPボーナスステージ" : `ステージ ${stageNum}`; 
             money = 150; 
             playerCastleHP = 1000; 
-            enemyCastleHP = (stageNum >= 8) ? 10000 : 6000; 
+            enemyCastleHP = (stageNum >= 8 && stageNum !== 100) ? 10000 : 6000; 
             maxEnemyCastleHP = enemyCastleHP; 
             activeMonsters = []; 
             activeHeroes = []; 
