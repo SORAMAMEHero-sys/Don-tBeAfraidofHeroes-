@@ -190,7 +190,16 @@
         }
 
         const SAVE_KEY = "monsterGameSave_v2";
-        let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { 
+        const OLD_SAVE_KEY = "monsterGameSave_v1"; // 旧キーの候補があればここから読み込みを試す
+        
+        let loadedData = null;
+        try {
+            loadedData = JSON.parse(localStorage.getItem(SAVE_KEY)) || JSON.parse(localStorage.getItem("monsterGameSave")) || JSON.parse(localStorage.getItem(OLD_SAVE_KEY));
+        } catch(e) {
+            loadedData = null;
+        }
+
+        let saveData = loadedData || { 
             maxUnlockedStage: 1, 
             xp: 0, 
             levels: [1, 1, 1, 1, 1, 1, 1], 
@@ -201,9 +210,9 @@
         };
         
         function checkSaveDataIntegrity() { 
-            if (!saveData.levels || saveData.levels.length < 7) saveData.levels = [1, 1, 1, 1, 1, 1, 1]; 
-            if (!saveData.unlockedUnits || saveData.unlockedUnits.length < 7) saveData.unlockedUnits = [true, true, true, false, true, true, false]; 
-            if (!saveData.evolved || saveData.evolved.length < 7) saveData.evolved = [false, false, false, false, false, false, false];
+            if (!saveData.levels || saveData.levels.length < 7) while(saveData.levels.length < 7) saveData.levels.push(1); 
+            if (!saveData.unlockedUnits || saveData.unlockedUnits.length < 7) while(saveData.unlockedUnits.length < 7) saveData.unlockedUnits.push(false); 
+            if (!saveData.evolved || saveData.evolved.length < 7) while(saveData.evolved.length < 7) saveData.evolved.push(false);
             if (!saveData.materials) saveData.materials = { atk: 0, hp: 0, spd: 0 };
             if (saveData.xpStageAvailableTime === undefined) saveData.xpStageAvailableTime = 0;
         }
@@ -211,7 +220,7 @@
         
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
         function unlockAllStages() { saveData.maxUnlockedStage = 10; saveData.unlockedUnits = [true, true, true, true, true, true, true]; saveGame(); initStageSelect(); }
-        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true, false], evolved: [false, false, false, false, false, false, false], materials: { atk: 0, hp: 0, spd: 0 }, xpStageAvailableTime: 0 }; initStageSelect(); } }
+        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); localStorage.removeItem("monsterGameSave"); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true, false], evolved: [false, false, false, false, false, false, false], materials: { atk: 0, hp: 0, spd: 0 }, xpStageAvailableTime: 0 }; initStageSelect(); } }
 
         const monsters = [
             { 
@@ -508,7 +517,7 @@
                     else if (index === 3) { hp *= 7.5; } 
                     else if (index === 4) { speed *= 30; } 
                     else if (index === 5) { hp *= 7.5; atk *= 7.5; speed *= 7.5; } 
-                    else if (index === 6) { atk = 1000; } // ニードラット進化後(ポイズント)は攻撃力1000
+                    else if (index === 6) { atk = 1000; } 
                 }
 
                 activeMonsters.push({ ...m, hp: hp, maxHp: hp, atk: atk, speed: speed, x: 70, evolved: saveData.evolved[index] }); 
