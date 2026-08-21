@@ -79,6 +79,48 @@
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+        // BGM設定
+        const bgmFiles = {
+            '1': '異世界レシピ.mp3',
+            '2': '異世界レシピ.mp3',
+            '3': '夕方.mp3',
+            '4': '夕方.mp3',
+            '5': '夜.mp3',
+            '6': '夜.mp3',
+            '7': 'ビーチ.mp3',
+            '8': '星空.mp3',
+            '9': '星空.mp3',
+            '10': 'BOSS.mp3',
+            '100': 'ビーチ.mp3'
+        };
+        let currentBgm = null;
+
+        function playBGM(stage) {
+            let file = bgmFiles[stage];
+            if (!file) return;
+
+            // 同じ曲が流れているなら何もしない
+            if (currentBgm && currentBgm.src.includes(file)) return;
+
+            // 前の曲を止める
+            if (currentBgm) {
+                currentBgm.pause();
+                currentBgm.currentTime = 0;
+            }
+
+            currentBgm = new Audio(file);
+            currentBgm.loop = true;
+            currentBgm.play().catch(e => console.log("BGM再生待ち"));
+        }
+
+        function stopBGM() {
+            if (currentBgm) {
+                currentBgm.pause();
+                currentBgm.currentTime = 0;
+                currentBgm = null;
+            }
+        }
+
         function playSound(type) {
             if (!audioCtx) return;
             if (audioCtx.state === 'suspended') { audioCtx.resume(); }
@@ -134,7 +176,7 @@
             if (stage <= 4) return bgImages["夕方の森"];
             if (stage <= 6) return bgImages["夜の森"];
             if (stage === 7) return bgImages["ビーチ"];
-            return bgImages["ステージ8以降"]; // ステージ8, 9, 10
+            return bgImages["ステージ8以降"];
         }
 
         const SAVE_KEY = "monsterGameSave_v1";
@@ -727,6 +769,7 @@
                 enemyCastleHP = maxEnemyCastleHP;
                 if (gameTimer >= 120) {
                     gameRunning = false;
+                    stopBGM();
                     saveData.xpStageAvailableTime = Date.now() + (15 * 60 * 1000);
                     saveGame();
                     alert("120秒耐久成功！XPボーナス獲得！");
@@ -737,12 +780,14 @@
 
             if (playerCastleHP <= 0) {
                 gameRunning = false;
+                stopBGM();
                 alert("敗北しました...");
                 returnToMap();
                 return;
             }
             if (currentStage !== 100 && enemyCastleHP <= 0) {
                 gameRunning = false;
+                stopBGM();
                 let reward = currentStage * 200;
                 saveData.xp += reward;
                 if (currentStage === saveData.maxUnlockedStage && saveData.maxUnlockedStage < 10) {
@@ -787,6 +832,10 @@
             document.getElementById("money").innerText = money; 
             initBattleUI(); 
             gameRunning = true; 
+
+            // ステージ開始時に対応するBGMを再生
+            playBGM(stageNum);
+
             if(stageTimerInterval) clearInterval(stageTimerInterval); 
             stageTimerInterval = setInterval(() => { 
                 if(!gameRunning) return; 
@@ -798,6 +847,7 @@
 
         function returnToMap() { 
             gameRunning = false; 
+            stopBGM(); // マップに戻ったらBGMを停止
             cancelAnimationFrame(gameLoopId); 
             if(stageTimerInterval) clearInterval(stageTimerInterval); 
             document.getElementById("battleScreen").classList.remove("active"); 
