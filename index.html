@@ -155,7 +155,7 @@
         checkSaveDataIntegrity();
         
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
-        function unlockAllStages() { saveData.maxUnlockedStage = 9; saveData.unlockedUnits = [true, true, true, true, true, true]; saveGame(); initStageSelect(); }
+        function unlockAllStages() { saveData.maxUnlockedStage = 10; saveData.unlockedUnits = [true, true, true, true, true, true]; saveGame(); initStageSelect(); }
         function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true], evolved: [false, false, false, false, false, false], materials: { atk: 0, hp: 0, spd: 0 }, xpStageAvailableTime: 0 }; initStageSelect(); } }
 
         const monsters = [
@@ -191,11 +191,13 @@
             "守護騎士": { name: "守護騎士", icon: "🛡️", hp: 400, speed: 0.4, range: 40, atk: 15, isProjectile: false, drop: "hp", dropRate: 0.03, area: false },
             "フクロウ教授": { name: "フクロウ教授", icon: "🦉", hp: 3000, speed: 0.6, range: 40, atk: 30, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false },
             "メェーラム敵": { name: "メェーラム", icon: "🐑", hp: 999999, speed: 1.2, range: 40, atk: 999999, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false },
-            "WiFiモンキー": { name: "WiFiモンキー", icon: "🛜🐒", hp: 5000, speed: 1.4, range: 50, atk: 999999, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false, attackInterval: 5.0 }
+            "WiFiモンキー": { name: "WiFiモンキー", icon: "🛜🐒", hp: 5000, speed: 1.4, range: 50, atk: 999999, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false, attackInterval: 5.0 },
+            "ダークウルフ": { name: "ダークウルフ", icon: "🐺", hp: 15000, speed: 0.6, range: 40, atk: 10, isProjectile: false, isBoss: true, drop: null, dropRate: 0, area: false, attackInterval: 0.2 }
         };
 
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
         let gameRunning = false, activeMonsters = [], activeHeroes = [], projectiles = [], effects = [], currentStage = 1, gameLoopId = null, gameTimer = 0, stageTimerInterval = null, coolDowns = [0, 0, 0, 0, 0, 0];
+        let stage10ShockwaveTriggered = false; // ステージ10の城1回叩き判定
 
         function updateXPStageTimerDisplay() {
             let btn = document.getElementById("xpStageBtn");
@@ -262,7 +264,7 @@
 
             const container = document.getElementById("stageButtonsContainer"); 
             container.innerHTML = ""; 
-            for(let i = 1; i <= 9; i++) { 
+            for(let i = 1; i <= 10; i++) { 
                 let b = document.createElement("button"); 
                 b.className = "stage-btn"; 
                 b.innerText = i <= saveData.maxUnlockedStage ? `ステージ ${i} (${i * 200}XP)` : `ステージ ${i} 🔒`; 
@@ -454,7 +456,12 @@
         function spawnEnemy(key) { 
             let template = enemyTemplates[key]; 
             if(template) {
-                activeHeroes.push({ ...template, x: 730, hp: template.hp, maxHp: template.hp, attackTimer: 0 });
+                let customHp = template.hp;
+                let customAtk = template.atk;
+                if (currentStage === 6) { customHp *= 0.7; }
+                if (currentStage === 7) { customHp *= 1.5; }
+
+                activeHeroes.push({ ...template, x: 730, hp: customHp, maxHp: customHp, atk: customAtk, attackTimer: 0 });
                 if (template.isBoss) { playSound("boss"); }
             } 
         }
@@ -480,39 +487,39 @@
                     if (sec === 5) spawnEnemy("フクロウ教授");
                     break;
                 case 6:
-                    // ステージ6：【大軍勢ステージ】次々と大量の戦士と弓使いが押し寄せる！
-                    if (sec % 2 === 0) spawnEnemy("戦士");
+                    if (sec % 1.5 <= 0.1 || sec % 1.5 === 0) spawnEnemy("戦士");
                     if (sec % 4 === 0) spawnEnemy("弓使い");
                     break;
                 case 7:
-                    // ステージ7：【要塞ステージ】硬い守護騎士の壁と、中盤からのフクロウ教授の襲来
-                    if (sec % 4 === 0) spawnEnemy("守護騎士");
-                    if (sec === 15 || sec === 45) spawnEnemy("フクロウ教授");
-                    if (sec % 5 === 0) spawnEnemy("弓使い");
+                    if (sec % 3 === 0) spawnEnemy("守護騎士");
+                    if (sec % 6 === 0) spawnEnemy("弓使い");
+                    if (sec === 20 || sec === 50) spawnEnemy("フクロウ教授");
                     break;
                 case 8:
-                    // ステージ8：【猛攻サバイバル】耐久戦、後半メェーラム出現
-                    if (sec === 5) {
-                        spawnEnemy("フクロウ教授");
-                    }
-                    if (sec >= 25) {
-                        if (sec % 1 === 0) spawnEnemy("弓使い");
-                    }
-                    if (sec >= 120) {
-                        spawnEnemy("メェーラム敵");
-                    }
+                    if (sec === 5) spawnEnemy("フクロウ教授");
+                    if (sec >= 15 && sec % 2 === 0) spawnEnemy("弓使い");
+                    if (sec >= 30 && sec % 3 === 0) spawnEnemy("守護騎士");
+                    if (sec >= 90) spawnEnemy("メェーラム敵");
                     break;
                 case 9:
-                    // ステージ9：【最終決戦】WiFiモンキーと全敵の総攻撃
                     if (sec === 5) spawnEnemy("守護騎士");
-                    if (sec === 15) spawnEnemy("フクロウ教授");
+                    if (sec === 15) {
+                        spawnEnemy("フクロウ教授");
+                        spawnEnemy("弓使い");
+                    }
                     if (sec === 25) {
                         spawnEnemy("WiFiモンキー");
                     }
-                    if (sec >= 30 && sec % 2 === 0) {
-                        spawnEnemy("戦士");
-                        spawnEnemy("弓使い");
+                    if (sec >= 30) {
+                        if (sec % 2 === 0) spawnEnemy("戦士");
+                        if (sec % 4 === 0) spawnEnemy("守護騎士");
                     }
+                    break;
+                case 10:
+                    // ステージ10：序盤は守護騎士と弓使いが堅実に守る。城を叩くとダークウルフ出現！
+                    if (sec % 4 === 0) spawnEnemy("守護騎士");
+                    if (sec % 6 === 0) spawnEnemy("弓使い");
+                    if (sec === 20) spawnEnemy("フクロウ教授");
                     break;
             }
         }
@@ -527,9 +534,17 @@
 
         function drawBackground(ctx, canvas) {
             if (currentStage === 8) {
-                ctx.fillStyle = "#1b263b";
+                ctx.fillStyle = "#0d1b2a";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "rgba(100, 200, 255, 0.15)";
+                ctx.fillStyle = "rgba(255, 100, 100, 0.08)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else if (currentStage === 9) {
+                ctx.fillStyle = "#2b0d2b";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else if (currentStage === 10) {
+                ctx.fillStyle = "#1a0000";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "rgba(255, 0, 0, 0.1)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             } else {
                 let img = getBgImageByStage(currentStage);
@@ -595,7 +610,18 @@
                         effects.push({ x: 720, y: 280, t: "+100XP!", life: 15 });
                         m.hp = 0;
                     } else {
+                        let prevHp = enemyCastleHP;
                         enemyCastleHP -= 0.6;
+                        
+                        // ステージ10の城1回叩き（HPが減り始めた瞬間）の判定
+                        if (currentStage === 10 && !stage10ShockwaveTriggered && enemyCastleHP < maxEnemyCastleHP) {
+                            stage10ShockwaveTriggered = true;
+                            // 衝撃波で味方をかなり手前(x=120)まで下げる
+                            activeMonsters.forEach(mon => { mon.x = Math.min(mon.x, 120); });
+                            effects.push({ x: 400, y: 200, t: "⚡ 凄まじい衝撃波！ ⚡", life: 50 });
+                            // ダークウルフ登場！
+                            spawnEnemy("ダークウルフ");
+                        }
                     }
                 }
                 drawCharacter(ctx, currentIcon, m.x, 340);
@@ -619,6 +645,20 @@
                         h.x -= h.speed;
                     } else {
                         playerCastleHP -= 5.0;
+                    }
+                } else if (h.name === "ダークウルフ") {
+                    let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
+                    if (target) {
+                        h.attackTimer = (h.attackTimer || 0) + 0.016;
+                        if (h.attackTimer >= 0.2) { // 0.2秒に1回攻撃
+                            h.attackTimer = 0;
+                            projectiles.push({ x: h.x, targetX: target.x, col: "#a855f7", type: "enemy" });
+                            target.hp -= h.atk;
+                        }
+                    } else if (h.x > 70) {
+                        h.x -= h.speed;
+                    } else {
+                        playerCastleHP -= 10.0;
                     }
                 } else if (h.area) {
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
@@ -664,13 +704,20 @@
                 drawCharacter(ctx, h.icon, h.x, 340);
             });
 
+            // 敵を倒したときの200円報酬
             activeHeroes.forEach(h => {
-                if (h.hp <= 0 && h.drop && h.dropRate) {
-                    if (Math.random() < h.dropRate) {
-                        saveData.materials[h.drop]++;
-                        saveGame();
-                        let dropName = h.drop === "atk" ? "攻撃力の心得" : h.drop === "hp" ? "体力の心得" : "速度の心得";
-                        effects.push({ x: h.x, y: 290, t: `✨${dropName}GET!`, life: 30 });
+                if (h.hp <= 0) {
+                    money += 200;
+                    document.getElementById("money").innerText = money;
+                    effects.push({ x: h.x, y: 260, t: "+200円", life: 25 });
+
+                    if (h.drop && h.dropRate) {
+                        if (Math.random() < h.dropRate) {
+                            saveData.materials[h.drop]++;
+                            saveGame();
+                            let dropName = h.drop === "atk" ? "攻撃力の心得" : h.drop === "hp" ? "体力の心得" : "速度の心得";
+                            effects.push({ x: h.x, y: 290, t: `✨${dropName}GET!`, life: 30 });
+                        }
                     }
                 }
             });
@@ -718,7 +765,7 @@
                 gameRunning = false;
                 let reward = currentStage * 200;
                 saveData.xp += reward;
-                if (currentStage === saveData.maxUnlockedStage && saveData.maxUnlockedStage < 9) {
+                if (currentStage === saveData.maxUnlockedStage && saveData.maxUnlockedStage < 10) {
                     saveData.maxUnlockedStage++;
                 }
                 saveGame();
@@ -732,13 +779,24 @@
 
         function startBattle(stageNum) { 
             currentStage = stageNum; 
+            stage10ShockwaveTriggered = false;
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("battleScreen").classList.add("active"); 
             document.getElementById("stageTitle").innerText = stageNum === 100 ? "💎 XPボーナスステージ" : `ステージ ${stageNum}`; 
             money = 150; 
             playerCastleHP = 1000; 
-            enemyCastleHP = (stageNum >= 8 && stageNum !== 100) ? 10000 : 6000; 
+            
+            if (stageNum === 7) {
+                enemyCastleHP = 15000;
+            } else if (stageNum === 9) {
+                enemyCastleHP = 20000;
+            } else if (stageNum === 10) {
+                enemyCastleHP = 30000;
+            } else {
+                enemyCastleHP = (stageNum >= 8 && stageNum !== 100) ? 10000 : 6000;
+            }
             maxEnemyCastleHP = enemyCastleHP; 
+
             activeMonsters = []; 
             activeHeroes = []; 
             projectiles = []; 
