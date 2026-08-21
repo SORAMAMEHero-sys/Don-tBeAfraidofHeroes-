@@ -79,7 +79,6 @@
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // ステージごとのBGM定義（isakai, yuugata, hoshizora, beach, boss, crystal）
         const bgmFiles = {
             '1': 'isakai.mp3', '2': 'isakai.mp3', '3': 'yuugata.mp3', '4': 'yuugata.mp3',
             '5': 'isakai.mp3', '6': 'hoshizora.mp3', '7': 'hoshizora.mp3', '8': 'beach.mp3',
@@ -155,7 +154,7 @@
         bgImages["夕方の森"].src = "IMG_2436.jpeg";
         bgImages["夜の森"].src = "IMG_2437.jpeg";
         bgImages["ビーチ"].src = "IMG_2439.jpeg";
-        bgImages["クリスタル洞窟"].src = "IMG_2438.jpeg"; // クリスタル洞窟用背景
+        bgImages["クリスタル洞窟"].src = "IMG_2438.jpeg";
 
         function getBgImageByStage(stage) {
             if (stage === 100) return bgImages["朝の森"];
@@ -163,7 +162,7 @@
             if (stage <= 4) return bgImages["夕方の森"];
             if (stage <= 7) return bgImages["夜の森"];
             if (stage === 8) return bgImages["ビーチ"];
-            return bgImages["クリスタル洞窟"]; // ステージ9〜13
+            return bgImages["クリスタル洞窟"];
         }
 
         const SAVE_KEY = "monsterGameSave_v1";
@@ -239,7 +238,6 @@
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
         let gameRunning = false, activeMonsters = [], activeHeroes = [], projectiles = [], effects = [], currentStage = 1, gameLoopId = null, gameTimer = 0, stageTimerInterval = null, coolDowns = [0, 0, 0, 0, 0, 0, 0];
         
-        // ステージ固有ギミックのフラグ管理
         let stage10ShockwaveTriggered = false;
         let stage12ShockwaveTriggered = false;
         let stage12LastShockwaveTime = 0;
@@ -314,7 +312,6 @@
                 let b = document.createElement("button"); 
                 b.className = "stage-btn"; 
                 
-                // ステージ10の解放条件をXP10000に設定、その他は従来通り
                 let reqXP = (i === 10) ? 10000 : i * 200;
                 let isLocked = i > saveData.maxUnlockedStage || (i === 10 && saveData.xp < 10000 && saveData.maxUnlockedStage >= 10);
                 
@@ -490,7 +487,6 @@
             } 
         }
 
-        // ステージ1〜13の波状攻撃・挙動設定
         function handleStageWaves(sec) {
             if (currentStage === 100) {
                 if (sec % 1 === 0) spawnEnemy("戦士");
@@ -519,7 +515,6 @@
                     }
                     break;
                 case 6:
-                    // 城攻撃時の処理は drawGame 内で行うためタイマー内は控えめ、または基本スポーン
                     break;
                 case 7:
                     if (sec >= 5 && (sec - 5) % 10 === 0) spawnEnemy("ゾンビ戦士");
@@ -621,7 +616,6 @@
                     } else {
                         enemyCastleHP -= 1.8;
                         
-                        // ステージ6の城攻撃トリガー
                         if (currentStage === 6 && enemyCastleHP < maxEnemyCastleHP) {
                             if (!window.stage6Triggered) {
                                 window.stage6Triggered = true;
@@ -632,7 +626,6 @@
                             if (gameTimer % 5 === 0 && Math.random() < 0.3) spawnEnemy("守護騎士");
                         }
 
-                        // ステージ7の城攻撃トリガー
                         if (currentStage === 7 && enemyCastleHP < maxEnemyCastleHP && !window.stage7CastleHit) {
                             window.stage7CastleHit = true;
                             spawnEnemy("ゾンビ戦士");
@@ -640,13 +633,11 @@
                             effects.push({ x: 400, y: 200, t: "⚡ ゾンビ戦士の奇襲！ ⚡", life: 50 });
                         }
 
-                        // ステージ9の城攻撃トリガー
                         if (currentStage === 9 && enemyCastleHP < maxEnemyCastleHP) {
                             if (!window.stage9Hit) {
                                 window.stage9Hit = true;
                                 spawnEnemy("WiFiモンキー");
                                 effects.push({ x: 400, y: 200, t: "⚡ 衝撃波 ＆ WiFiモンキー！ ⚡", life: 50 });
-                                // 城を叩くと10秒ごとにゾンビ戦士が追加で出るタイマーを起動
                                 if (!stage9ZombieTimer) {
                                     stage9ZombieTimer = setInterval(() => {
                                         if (gameRunning) spawnEnemy("ゾンビ戦士");
@@ -655,16 +646,14 @@
                             }
                         }
 
-                        // ステージ10の城攻撃トリガー：衝撃波、ダークウルフ出現、BGMをボスのテーマ(boss.mp3)に変更
                         if (currentStage === 10 && !stage10ShockwaveTriggered && enemyCastleHP < maxEnemyCastleHP) {
                             stage10ShockwaveTriggered = true;
                             activeMonsters.forEach(mon => { mon.x = Math.min(mon.x, 120); });
                             effects.push({ x: 400, y: 200, t: "⚡ 衝撃波 ＆ ダークウルフ出現！ ⚡", life: 60 });
                             spawnEnemy("ダークウルフ");
-                            playBGM(10, 'boss.mp3'); // ボスのテーマへ切り替え
+                            playBGM(10, 'boss.mp3');
                         }
 
-                        // ステージ12の30秒ごと衝撃波トリガー
                         if (currentStage === 12) {
                             if (!stage12ShockwaveTriggered && enemyCastleHP < maxEnemyCastleHP) {
                                 stage12ShockwaveTriggered = true;
@@ -678,7 +667,6 @@
                             }
                         }
 
-                        // ステージ13の城を叩いたときの衝撃波
                         if (currentStage === 13 && !stage13ShockwaveTriggered && enemyCastleHP < maxEnemyCastleHP) {
                             stage13ShockwaveTriggered = true;
                             activeMonsters.forEach(mon => { mon.x = Math.max(20, mon.x - 180); });
@@ -693,7 +681,6 @@
 
             activeHeroes.forEach((h) => {
                 if (h.isZombieWarrior) {
-                    // ゾンビ戦士の特殊挙動：死亡時（hp<=0の処理へ）の復活を管理
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
                     if (target) {
                         h.attackTimer = (h.attackTimer || 0) + 0.016;
@@ -774,13 +761,11 @@
                 drawCharacter(ctx, h.icon, h.x, 340);
             });
 
-            // 敵が倒れたときの処理・ゾンビ戦士の復活処理
             activeHeroes.forEach((h) => {
                 if (h.hp <= 0) {
                     if (h.isZombieWarrior && !h.hasRevived) {
                         h.hasRevived = true;
-                        h.hp = 5; // 5秒後（ここでは簡易的にフラグ制御または即座、指定に沿いHP5で復活）
-                        // 厳密に5秒待たせる代わりに、簡易復活演出として体力5でその場に復活
+                        h.hp = 5; 
                         effects.push({ x: h.x, y: 260, t: "✨ゾンビ復活！", life: 30 });
                         return;
                     }
@@ -868,13 +853,11 @@
 
             document.getElementById("stageSelectScreen").classList.remove("active"); 
             document.getElementById("battleScreen").classList.add("active"); 
-            document.getElementById("stageTitle.innerText") = "";
             document.getElementById("stageTitle").innerText = (stageNum === 100) ? "💎 XPボーナスステージ" : `ステージ ${stageNum}`; 
             
             money = 150; 
             playerCastleHP = 1000; 
             
-            // ステージ8の特別仕様：城の体力1
             if (stageNum === 8) {
                 playerCastleHP = 1;
                 maxPlayerCastleHP = 1;
