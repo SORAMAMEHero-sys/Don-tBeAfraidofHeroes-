@@ -189,29 +189,29 @@
             return bgImages["ステージ8以降"];
         }
 
-        const SAVE_KEY = "monsterGameSave_v1";
+        const SAVE_KEY = "monsterGameSave_v2";
         let saveData = JSON.parse(localStorage.getItem(SAVE_KEY)) || { 
             maxUnlockedStage: 1, 
             xp: 0, 
-            levels: [1, 1, 1, 1, 1, 1], 
-            unlockedUnits: [true, true, true, false, true, true],
-            evolved: [false, false, false, false, false, false],
+            levels: [1, 1, 1, 1, 1, 1, 1], 
+            unlockedUnits: [true, true, true, false, true, true, false],
+            evolved: [false, false, false, false, false, false, false],
             materials: { atk: 0, hp: 0, spd: 0 },
             xpStageAvailableTime: 0
         };
         
         function checkSaveDataIntegrity() { 
-            if (!saveData.levels || saveData.levels.length < 6) saveData.levels = [1, 1, 1, 1, 1, 1]; 
-            if (!saveData.unlockedUnits || saveData.unlockedUnits.length < 6) saveData.unlockedUnits = [true, true, true, false, true, true]; 
-            if (!saveData.evolved) saveData.evolved = [false, false, false, false, false, false];
+            if (!saveData.levels || saveData.levels.length < 7) saveData.levels = [1, 1, 1, 1, 1, 1, 1]; 
+            if (!saveData.unlockedUnits || saveData.unlockedUnits.length < 7) saveData.unlockedUnits = [true, true, true, false, true, true, false]; 
+            if (!saveData.evolved || saveData.evolved.length < 7) saveData.evolved = [false, false, false, false, false, false, false];
             if (!saveData.materials) saveData.materials = { atk: 0, hp: 0, spd: 0 };
             if (saveData.xpStageAvailableTime === undefined) saveData.xpStageAvailableTime = 0;
         }
         checkSaveDataIntegrity();
         
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
-        function unlockAllStages() { saveData.maxUnlockedStage = 10; saveData.unlockedUnits = [true, true, true, true, true, true]; saveGame(); initStageSelect(); }
-        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true], evolved: [false, false, false, false, false, false], materials: { atk: 0, hp: 0, spd: 0 }, xpStageAvailableTime: 0 }; initStageSelect(); } }
+        function unlockAllStages() { saveData.maxUnlockedStage = 10; saveData.unlockedUnits = [true, true, true, true, true, true, true]; saveGame(); initStageSelect(); }
+        function resetSaveData() { if (confirm("セーブデータを初期化しますか？")) { localStorage.removeItem(SAVE_KEY); saveData = { maxUnlockedStage: 1, xp: 0, levels: [1, 1, 1, 1, 1, 1, 1], unlockedUnits: [true, true, true, false, true, true, false], evolved: [false, false, false, false, false, false, false], materials: { atk: 0, hp: 0, spd: 0 }, xpStageAvailableTime: 0 }; initStageSelect(); } }
 
         const monsters = [
             { 
@@ -237,6 +237,10 @@
             { 
                 name: "ドラゴン", evolveName: "ヒドラゴラゴン", icon: "🐉", evolveIcon: "🐲", cost: 3000, cd: 25.0, baseHp: 500, speed: 1.2, range: 250, baseAtk: 50, area: true, skill: null,
                 hasEvolve: true, evolveCostXp: 350000, evolveReq: { hp: 20, atk: 20, spd: 20 }
+            },
+            { 
+                name: "ニードラット", evolveName: "ポイズント", icon: "🦔", evolveIcon: "🐁", cost: 1200, cd: 12.0, baseHp: 200, speed: 8.5, range: 40, baseAtk: 250, area: false, skill: null,
+                hasEvolve: true, evolveCostXp: 50000, evolveReq: { atk: 20 }
             }
         ];
         
@@ -251,7 +255,7 @@
         };
 
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
-        let gameRunning = false, activeMonsters = [], activeHeroes = [], projectiles = [], effects = [], currentStage = 1, gameLoopId = null, gameTimer = 0, stageTimerInterval = null, coolDowns = [0, 0, 0, 0, 0, 0];
+        let gameRunning = false, activeMonsters = [], activeHeroes = [], projectiles = [], effects = [], currentStage = 1, gameLoopId = null, gameTimer = 0, stageTimerInterval = null, coolDowns = [0, 0, 0, 0, 0, 0, 0];
         let stage10ShockwaveTriggered = false;
 
         function updateXPStageTimerDisplay() {
@@ -353,10 +357,11 @@
                 let currentIcon = isEvolved ? m.evolveIcon : m.icon;
 
                 if (!isUnlocked) {
+                    let unlockCost = (i === 6) ? "10000XP" : "3000XP";
                     div.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="font-size:15px; font-weight: bold; color: #888;">🔒 ${m.icon} ${m.name} (未解放)</span>
-                            <button class="up-btn" style="background-color: #ff9800;" onclick="unlockUnit(${i})">解放(3000XP)</button>
+                            <button class="up-btn" style="background-color: #ff9800;" onclick="unlockUnit(${i})">解放(${unlockCost})</button>
                         </div>
                         ${skillHtml}
                     `;
@@ -400,13 +405,14 @@
         }
 
         function unlockUnit(index) {
-            if (saveData.xp >= 3000) {
-                saveData.xp -= 3000;
+            let cost = (index === 6) ? 10000 : 3000;
+            if (saveData.xp >= cost) {
+                saveData.xp -= cost;
                 saveData.unlockedUnits[index] = true;
                 saveGame();
                 openPowerUpScreen();
             } else {
-                alert("XPが足りません！（3000XP必要です）");
+                alert(`XPが足りません！（${cost}XP必要です）`);
             }
         }
 
@@ -502,6 +508,7 @@
                     else if (index === 3) { hp *= 7.5; } 
                     else if (index === 4) { speed *= 30; } 
                     else if (index === 5) { hp *= 7.5; atk *= 7.5; speed *= 7.5; } 
+                    else if (index === 6) { atk = 1000; } // ニードラット進化後(ポイズント)は攻撃力1000
                 }
 
                 activeMonsters.push({ ...m, hp: hp, maxHp: hp, atk: atk, speed: speed, x: 70, evolved: saveData.evolved[index] }); 
@@ -648,7 +655,6 @@
                         effects.push({ x: 720, y: 280, t: "+100XP!", life: 15 });
                         m.hp = 0;
                     } else {
-                        // 城を壊すスピードを約3倍にする（削る量を 0.6 から 1.8 に変更）
                         enemyCastleHP -= 1.8;
                         
                         if (currentStage === 10 && !stage10ShockwaveTriggered && enemyCastleHP < maxEnemyCastleHP) {
@@ -823,7 +829,6 @@
             money = 150; 
             playerCastleHP = 1000; 
             
-            // 各ステージの敵の城のHPを約3分の1に調整しました！
             if (stageNum === 7) {
                 enemyCastleHP = 5000;
             } else if (stageNum === 9) {
@@ -840,7 +845,7 @@
             projectiles = []; 
             effects = []; 
             gameTimer = 0; 
-            coolDowns = [0, 0, 0, 0, 0, 0]; 
+            coolDowns = [0, 0, 0, 0, 0, 0, 0]; 
             document.getElementById("money").innerText = money; 
             initBattleUI(); 
             gameRunning = true; 
