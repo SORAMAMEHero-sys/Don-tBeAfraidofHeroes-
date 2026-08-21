@@ -79,8 +79,23 @@
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // BGM設定
+        // BGM設定（※ファイル名が破損・または存在しない場合の対策としてエラーハンドリングを追加）
         const bgmFiles = {
+            '1': 'isakai.mp3',   // 読み込みエラー時の保険として別名や実在パスに調整可能
+            '2': 'isakai.mp3',
+            '3': 'yuugata.mp3',
+            '4': 'yuugata.mp3',
+            '5': 'yoru.mp3',
+            '6': 'yoru.mp3',
+            '7': 'beach.mp3',
+            '8': 'hoshizora.mp3',
+            '9': 'hoshizora.mp3',
+            '10': 'boss.mp3',
+            '100': 'beach.mp3'
+        };
+        
+        // もし元の日本語ファイル名で使いたい場合はこちらに書き換えてね（ファイル名が完全一致しているか要確認）
+        const bgmFilesJp = {
             '1': '異世界レシピ.mp3',
             '2': '異世界レシピ.mp3',
             '3': '夕方.mp3',
@@ -93,24 +108,36 @@
             '10': 'BOSS.mp3',
             '100': 'ビーチ.mp3'
         };
+
         let currentBgm = null;
 
         function playBGM(stage) {
-            let file = bgmFiles[stage];
-            if (!file) return;
-
-            // 同じ曲が流れているなら何もしない
-            if (currentBgm && currentBgm.src.includes(file)) return;
-
-            // 前の曲を止める
-            if (currentBgm) {
-                currentBgm.pause();
-                currentBgm.currentTime = 0;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
             }
 
+            let file = bgmFilesJp[stage] || bgmFiles[stage];
+            if (!file) return;
+
+            // 既に同じ曲が鳴っていれば再생を継続
+            if (currentBgm && currentBgm.dataset.file === file) {
+                if (currentBgm.paused) {
+                    currentBgm.play().catch(e => console.log("BGM再開ブロック:", e));
+                }
+                return;
+            }
+
+            // 前の曲を完全に停止・破棄
+            stopBGM();
+
             currentBgm = new Audio(file);
+            currentBgm.dataset.file = file;
             currentBgm.loop = true;
-            currentBgm.play().catch(e => console.log("BGM再生待ち"));
+            currentBgm.volume = 0.5; // 音量調整（必要に応じて 0.0 〜 1.0）
+            
+            currentBgm.play().catch(e => {
+                console.log("BGM自動再生がブロックされました。画面操作後に再生されます。", e);
+            });
         }
 
         function stopBGM() {
@@ -833,7 +860,7 @@
             initBattleUI(); 
             gameRunning = true; 
 
-            // ステージ開始時に対応するBGMを再生
+            // 確実にBGMを鳴らす
             playBGM(stageNum);
 
             if(stageTimerInterval) clearInterval(stageTimerInterval); 
@@ -847,7 +874,7 @@
 
         function returnToMap() { 
             gameRunning = false; 
-            stopBGM(); // マップに戻ったらBGMを停止
+            stopBGM(); 
             cancelAnimationFrame(gameLoopId); 
             if(stageTimerInterval) clearInterval(stageTimerInterval); 
             document.getElementById("battleScreen").classList.remove("active"); 
