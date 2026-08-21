@@ -161,7 +161,7 @@
                 hasEvolve: true, evolveCostXp: 10000, evolveReq: { atk: 10 }
             },
             { 
-                name: "タンクムーン", evolveName: "シャールサン", icon: "🌝", evolveIcon: "🌕", cost: 300, cd: 4.0, baseHp: 700, speed: 0.4, range: 40, baseAtk: 1, area: false, skill: { name: "高速敵ダメージ軽減", desc: "移動速度2.0以上の敵からのダメージを40%軽減" },
+                name: "タンクムーン", evolveName: "シャールサン", icon: "🌝", evolveIcon: "🌕", cost: 300, cd: 4.0, baseHp: 700, speed: 0.4, range: 40, baseAtk: 1, area: false, skill: { name: "高速敵ダメージ軽減", desc: "移動速度2.0以上の敵からのダメージを85%軽減" },
                 hasEvolve: true, evolveCostXp: 100000, evolveReq: { hp: 20 }
             },
             { 
@@ -490,7 +490,6 @@
             }
         }
 
-        // キャラクター描画（白い丸の背景を削除し、直接アイコンを表示）
         function drawCharacter(ctx, icon, x, y) {
             ctx.save();
             ctx.font = "52px Arial";
@@ -506,24 +505,20 @@
             const ctx = canvas.getContext("2d"); 
             ctx.clearRect(0, 0, 800, 400);
 
-            // 背景描画
             drawBackground(ctx, canvas);
 
-            // 城の表示
             ctx.font = "80px Arial"; 
             ctx.textAlign = "left";
             ctx.textBaseline = "alphabetic";
             ctx.fillText("🏰", 10, 345); 
             ctx.fillText("👑", 720, 345);
 
-            // 体力バー
             const bw = 90, bh = 9; 
             ctx.fillStyle = "#555"; ctx.fillRect(10, 245, bw, bh); 
             ctx.fillStyle = "#2ecc71"; ctx.fillRect(10, 245, bw * Math.max(0, playerCastleHP / maxPlayerCastleHP), bh); 
             ctx.fillStyle = "#555"; ctx.fillRect(710, 245, bw, bh); 
             ctx.fillStyle = "#e74c3c"; ctx.fillRect(710, 245, bw * Math.max(0, enemyCastleHP / maxEnemyCastleHP), bh);
 
-            // 味方モンスター描画
             activeMonsters.forEach((m) => {
                 let target = activeHeroes.find(h => Math.abs(h.x - m.x) < m.range);
                 let currentIcon = m.evolved ? m.evolveIcon : m.icon;
@@ -546,7 +541,6 @@
 
             let initialEnemyCount = activeHeroes.length;
 
-            // 敵キャラクター描画
             activeHeroes.forEach((h) => {
                 if (h.name === "WiFiモンキー") {
                     let target = activeMonsters.find(m => Math.abs(m.x - h.x) < h.range);
@@ -587,7 +581,7 @@
                             if (h.isProjectile && target.name === "スズメバチ" && target.skill) {
                                 effects.push({ x: target.x, y: 330, t: "🛡️", life: 15 }); 
                             } else if (target.name === "タンクムーン" && h.speed >= 2.0) {
-                                let reducedAtk = h.atk * 0.6; 
+                                let reducedAtk = h.atk * 0.15; // 85%軽減 (残りのダメージは15%)
                                 projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
                                 target.hp -= reducedAtk;
                                 effects.push({ x: target.x, y: 330, t: "🛡️", life: 10 });
