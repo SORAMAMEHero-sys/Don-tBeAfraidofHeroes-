@@ -462,7 +462,6 @@
         function handleStageWaves(sec) {
             if (currentStage === 100) {
                 if (sec % 1 === 0) spawnEnemy("戦士");
-                // ハト助は完全に排除！
                 return;
             }
 
@@ -481,11 +480,18 @@
                     if (sec === 5) spawnEnemy("フクロウ教授");
                     break;
                 case 6:
+                    // ステージ6：【大軍勢ステージ】次々と大量の戦士と弓使いが押し寄せる！
+                    if (sec % 2 === 0) spawnEnemy("戦士");
+                    if (sec % 4 === 0) spawnEnemy("弓使い");
+                    break;
                 case 7:
-                    if (sec % 5 === 0) spawnEnemy("守護騎士");
-                    if (sec % 7 === 0) spawnEnemy("弓使い");
+                    // ステージ7：【要塞ステージ】硬い守護騎士の壁と、中盤からのフクロウ教授の襲来
+                    if (sec % 4 === 0) spawnEnemy("守護騎士");
+                    if (sec === 15 || sec === 45) spawnEnemy("フクロウ教授");
+                    if (sec % 5 === 0) spawnEnemy("弓使い");
                     break;
                 case 8:
+                    // ステージ8：【猛攻サバイバル】耐久戦、後半メェーラム出現
                     if (sec === 5) {
                         spawnEnemy("フクロウ教授");
                     }
@@ -497,8 +503,15 @@
                     }
                     break;
                 case 9:
+                    // ステージ9：【最終決戦】WiFiモンキーと全敵の総攻撃
+                    if (sec === 5) spawnEnemy("守護騎士");
+                    if (sec === 15) spawnEnemy("フクロウ教授");
                     if (sec === 25) {
                         spawnEnemy("WiFiモンキー");
+                    }
+                    if (sec >= 30 && sec % 2 === 0) {
+                        spawnEnemy("戦士");
+                        spawnEnemy("弓使い");
                     }
                     break;
             }
@@ -636,7 +649,6 @@
                                 target.hp -= reducedAtk;
                                 effects.push({ x: target.x, y: 330, t: "🛡️", life: 10 });
                             } else {
-                                // ステージ100（XPステージ）の戦士なら攻撃力を1/10にする
                                 let finalAtk = (currentStage === 100 && h.name === "戦士") ? (h.atk / 10) : h.atk;
                                 
                                 projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
