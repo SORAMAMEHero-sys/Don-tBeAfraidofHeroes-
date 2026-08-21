@@ -198,7 +198,6 @@
         let money = 150, playerCastleHP = 1000, maxPlayerCastleHP = 1000, enemyCastleHP = 1000, maxEnemyCastleHP = 1000;
         let gameRunning = false, activeMonsters = [], activeHeroes = [], projectiles = [], effects = [], currentStage = 1, gameLoopId = null, gameTimer = 0, stageTimerInterval = null, coolDowns = [0, 0, 0, 0, 0, 0];
 
-        // XPステージのタイマー表示更新
         function updateXPStageTimerDisplay() {
             let btn = document.getElementById("xpStageBtn");
             let txt = document.getElementById("xpTimerText");
@@ -463,7 +462,6 @@
 
         function handleStageWaves(sec) {
             if (currentStage === 100) {
-                // XPステージ用ウェーブ：1秒ごとに戦士、10秒ごとにハト助
                 if (sec % 1 === 0) spawnEnemy("戦士");
                 if (sec % 10 === 0) spawnEnemy("ハト助");
                 return;
@@ -585,13 +583,11 @@
                 } else if (m.x < 700) {
                     m.x += m.speed; 
                 } else {
-                    // 城に到達したときの処理
                     if (currentStage === 100) {
-                        // XPステージなら城を叩くごとに100XP獲得
                         saveData.xp += 100;
                         document.getElementById("totalXp").innerText = saveData.xp;
                         effects.push({ x: 720, y: 280, t: "+100XP!", life: 15 });
-                        m.hp = 0; // 攻撃したら消える仕様
+                        m.hp = 0;
                     } else {
                         enemyCastleHP -= 0.6;
                     }
@@ -642,13 +638,16 @@
                             if (h.isProjectile && target.name === "スズメバチ" && target.skill) {
                                 effects.push({ x: target.x, y: 330, t: "🛡️", life: 15 }); 
                             } else if (target.name === "タンクムーン" && h.speed >= 2.0) {
-                                let reducedAtk = h.atk * 0.15; // 85%軽減
+                                let reducedAtk = h.atk * 0.15;
                                 projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
                                 target.hp -= reducedAtk;
                                 effects.push({ x: target.x, y: 330, t: "🛡️", life: 10 });
                             } else {
+                                // ★ ここが今回の修正ポイント！ステージ100（XPステージ）の「戦士」なら攻撃力を1/10にする！
+                                let finalAtk = (currentStage === 100 && h.name === "戦士") ? (h.atk / 10) : h.atk;
+                                
                                 projectiles.push({ x: h.x, targetX: target.x, col: "#e74c3c", type: "enemy" }); 
-                                target.hp -= h.atk; 
+                                target.hp -= finalAtk; 
                             }
                         } 
                     } else if (h.x > 70) {
@@ -692,12 +691,11 @@
             });
             effects = effects.filter(e => e.life > 0);
 
-            // XPステージの特殊勝利判定（120秒耐え抜く）
             if (currentStage === 100) {
-                enemyCastleHP = maxEnemyCastleHP; // 城無敵
+                enemyCastleHP = maxEnemyCastleHP;
                 if (gameTimer >= 120) {
                     gameRunning = false;
-                    saveData.xpStageAvailableTime = Date.now() + (15 * 60 * 1000); // 15分クールダウン
+                    saveData.xpStageAvailableTime = Date.now() + (15 * 60 * 1000);
                     saveGame();
                     alert("120秒耐久成功！XPボーナス獲得！");
                     returnToMap();
