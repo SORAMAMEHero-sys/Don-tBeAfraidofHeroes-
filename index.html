@@ -613,7 +613,6 @@
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             
-            // 2文字以上の複合絵文字（例: 🧟‍♀️⚔️ や ❤️‍🔥👺 など）の場合は、左側に少し寄せて本体判定を合わせる
             let isComposite = [...icon].length > 1;
             let offset = isComposite ? -12 : 0;
 
@@ -822,15 +821,18 @@
                 drawCharacter(ctx, h.icon, h.x, 340, false);
             });
 
+            // 1回目のHP0判定：ゾンビの復活処理を先に行う
             activeHeroes.forEach((h) => {
-                if (h.hp <= 0) {
-                    if (h.isZombieWarrior && !h.hasRevived) {
-                        h.hasRevived = true;
-                        h.hp = 5; 
-                        effects.push({ x: h.x, y: 260, t: "✨ゾンビ復活！", life: 30 });
-                        return;
-                    }
+                if (h.hp <= 0 && h.isZombieWarrior && !h.hasRevived) {
+                    h.hasRevived = true;
+                    h.hp = 5; 
+                    effects.push({ x: h.x, y: 260, t: "✨ゾンビ復活！", life: 30 });
+                }
+            });
 
+            // 完全撃破された敵の処理（本当にHPが0以下のものだけ）
+            activeHeroes.forEach((h) => {
+                if (h.hp <= 0 && (!h.isZombieWarrior || h.hasRevived)) {
                     money += 200;
                     document.getElementById("money").innerText = money;
                     effects.push({ x: h.x, y: 260, t: "+200円", life: 25 });
@@ -847,7 +849,8 @@
             });
 
             activeMonsters = activeMonsters.filter(m => m.hp > 0);
-            activeHeroes = activeHeroes.filter(h => h.hp > 0 || (h.isZombieWarrior && h.hp === 5));
+            // ゾンビが復活してHPが5になった場合は消さずに残すように修正！
+            activeHeroes = activeHeroes.filter(h => h.hp > 0 || (h.isZombieWarrior && h.hp === 5 && !h.hasRevived));
             
             if (activeHeroes.length < initialEnemyCount) { playSound("defeat"); }
 
