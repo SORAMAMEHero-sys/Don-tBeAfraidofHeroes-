@@ -613,12 +613,11 @@
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             
-            // ゾンビ戦士(🧟‍♀️⚔️など)の場合のオフセット調整
-            let drawX = isAlly ? x + 25 : x + 15;
-            if (icon.includes("🧟")) {
-                drawX -= 15;
-            }
+            // 複数の絵文字が組み合わさっている場合は右へ大きくずらして重なり・めり込みを防ぐ
+            let charLength = [...icon].length;
+            let offset = charLength > 1 ? 25 : 0;
 
+            let drawX = (isAlly ? x + 25 : x + 15) + offset;
             ctx.fillText(icon, drawX, y - 18);
             ctx.restore();
         }
