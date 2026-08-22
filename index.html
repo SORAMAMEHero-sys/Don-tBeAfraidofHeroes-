@@ -821,16 +821,16 @@
                 drawCharacter(ctx, h.icon, h.x, 340, false);
             });
 
-            // 1回目のHP0判定：ゾンビの復活処理を先に行う
+            // ゾンビの復活処理（HPが0以下になった瞬間に一度だけ、最大HPで満タン復活）
             activeHeroes.forEach((h) => {
                 if (h.hp <= 0 && h.isZombieWarrior && !h.hasRevived) {
                     h.hasRevived = true;
-                    h.hp = 5; 
-                    effects.push({ x: h.x, y: 260, t: "✨ゾンビ復活！", life: 30 });
+                    h.hp = h.maxHp; 
+                    effects.push({ x: h.x, y: 260, t: "✨ゾンビ完全復活！", life: 30 });
                 }
             });
 
-            // 完全撃破された敵の処理（本当にHPが0以下のものだけ）
+            // 完全に倒れた敵（ゾンビでまだ復活していない、または復活後にまた倒されたもの）の報酬処理
             activeHeroes.forEach((h) => {
                 if (h.hp <= 0 && (!h.isZombieWarrior || h.hasRevived)) {
                     money += 200;
@@ -849,8 +849,7 @@
             });
 
             activeMonsters = activeMonsters.filter(m => m.hp > 0);
-            // ゾンビが復活してHPが5になった場合は消さずに残すように修正！
-            activeHeroes = activeHeroes.filter(h => h.hp > 0 || (h.isZombieWarrior && h.hp === 5 && !h.hasRevived));
+            activeHeroes = activeHeroes.filter(h => h.hp > 0 || (h.isZombieWarrior && !h.hasRevived));
             
             if (activeHeroes.length < initialEnemyCount) { playSound("defeat"); }
 
