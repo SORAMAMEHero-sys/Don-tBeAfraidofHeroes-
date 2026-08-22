@@ -78,6 +78,29 @@
 
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let audioUnlocked = false;
+
+        // スマホの自動再生ブロックを解除するためのタッチ/クリック監視
+        function unlockAudio() {
+            if (audioUnlocked) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            // 無音のダミー音を鳴らしてスマホのロックを完全に解除
+            try {
+                const buffer = audioCtx.createBuffer(1, 1, 22050);
+                const source = audioCtx.createBufferSource();
+                source.buffer = buffer;
+                source.connect(audioCtx.destination);
+                source.start(0);
+            } catch (e) {}
+            audioUnlocked = true;
+        }
+
+        // 画面のどこかを最初に触ったときに自動でロック解除
+        ['click', 'touchstart', 'keydown'].forEach(evt => {
+            window.addEventListener(evt, unlockAudio, { once: true });
+        });
 
         const bgmFiles = {
             '1': 'isakai.mp3', '2': 'isakai.mp3', '3': 'yuugata.mp3', '4': 'yuugata.mp3',
@@ -89,7 +112,7 @@
         let currentBgm = null;
 
         function playBGM(stage, overrideFile = null) {
-            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+            unlockAudio();
             let file = overrideFile || bgmFiles[stage];
             if (!file) return;
             if (currentBgm && currentBgm.dataset.file === file) {
@@ -115,7 +138,7 @@
 
         function playSound(type) {
             if (!audioCtx) return;
-            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+            unlockAudio();
             const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
             osc.connect(gainNode);
@@ -842,6 +865,7 @@
         }
 
         function startBattle(stageNum) { 
+            unlockAudio();
             currentStage = stageNum; 
             stage10ShockwaveTriggered = false;
             stage12ShockwaveTriggered = false;
