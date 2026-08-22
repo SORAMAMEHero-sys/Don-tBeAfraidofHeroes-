@@ -79,7 +79,7 @@
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         let audioUnlocked = false;
-        let pendingBossMusic = false; // ボス曲のタップ待ちフラグ
+        let pendingBossMusic = false;
 
         function unlockAudio() {
             if (audioUnlocked) return;
@@ -96,12 +96,10 @@
             audioUnlocked = true;
         }
 
-        // 画面全体でタップを監視：もしボス曲待ちなら、ここで再生を発動させる！
         function handleGlobalTouch() {
             unlockAudio();
             if (pendingBossMusic) {
                 pendingBossMusic = false;
-                // バナー表記を消すためにエフェクトを追加
                 effects.push({ x: 400, y: 150, t: "🎵 ボス曲再生開始！", life: 40 });
                 playBGM(null, 'boss.mp3');
             }
@@ -124,7 +122,6 @@
             let file = overrideFile || bgmFiles[stage];
             if (!file) return;
 
-            // もしボス曲を指定されていて、まだスマホにブロックされる恐れがある場合の保険としてタップ待ちにする
             if (file === 'boss.mp3' && !audioUnlocked) {
                 pendingBossMusic = true;
                 return;
@@ -259,7 +256,7 @@
 
         const monsters = [
             { name: "スライム", evolveName: "スクイーズ", icon: "🟢", evolveIcon: "🔵", cost: 50, cd: 1.5, baseHp: 80, speed: 2.0, range: 40, baseAtk: 8, area: false, skill: null, hasEvolve: true, evolveCostXp: 10000, evolveReq: { hp: 5 } },
-            { name: "ゾンビ", evolveName: "ボス・ゾンビ", icon: "🧟", evolveIcon: "🧟‍♂️", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false, skill: null, hasEvolve: true, evolveCostXp: 10000, evolveReq: { spd: 2, hp: 3 } },
+            { name: "天狗", evolveName: "炎の天狗", icon: "👺", evolveIcon: "❤️‍🔥👺", cost: 120, cd: 3.0, baseHp: 350, speed: 0.8, range: 40, baseAtk: 12, area: false, skill: null, hasEvolve: true, evolveCostXp: 10000, evolveReq: { spd: 10 } },
             { name: "ボマー", evolveName: "ヌクレアスボマー", icon: "💣", evolveIcon: "💥", cost: 200, cd: 6.0, baseHp: 40, speed: 3.0, range: 60, baseAtk: 150, area: true, skill: null, hasEvolve: true, evolveCostXp: 10000, evolveReq: { atk: 10 } },
             { name: "タンクムーン", evolveName: "シャールサン", icon: "🌝", evolveIcon: "🌕", cost: 300, cd: 4.0, baseHp: 700, speed: 0.4, range: 40, baseAtk: 1, area: false, skill: { name: "高速敵ダメージ軽減", desc: "移動速度2.0以上の敵からのダメージを85%軽減" }, hasEvolve: true, evolveCostXp: 100000, evolveReq: { hp: 20 } },
             { name: "スズメバチ", evolveName: "オオスズメバチ", icon: "🐝", evolveIcon: "🐝", cost: 500, cd: 5.0, baseHp: 100, speed: 3.0, range: 150, baseAtk: 30, area: true, skill: { name: "飛び道具無効", desc: "弓使いなどの遠距離攻撃を完全に無効化する" }, hasEvolve: true, evolveCostXp: 100000, evolveReq: { spd: 20 } },
@@ -358,7 +355,7 @@
                 let reqXP = (i === 10) ? 10000 : i * 200;
                 let isLocked = i > saveData.maxUnlockedStage || (i === 10 && saveData.xp < 10000 && saveData.maxUnlockedStage >= 10);
                 
-                b.innerText = (i <= saveData.maxUnlockedStage || (i === 10 && saveData.xp >= 10000)) ? `ステージ ${i}` : `ステージ ${i} 🔒(要XP${reqXP})`; 
+                b.innerText = (i <= saveData.maxUnlockedStage || (i === 10 && saveData.xp >= 10000)) ? `ステージ ${i}` : `ステージ ${i} 🔒(Valid XP${reqXP})`; 
                 b.disabled = (i > saveData.maxUnlockedStage && !(i === 10 && saveData.xp >= 10000)); 
                 b.onclick = () => startBattle(i); 
                 container.appendChild(b); 
@@ -504,7 +501,10 @@
 
                 if (saveData.evolved[index]) {
                     if (index === 0) { hp *= 3; } 
-                    else if (index === 1) { hp *= 2; speed *= 1.75; } 
+                    else if (index === 1) { 
+                        coolDowns[index] = 1.0; 
+                        speed *= 2.5;           
+                    } 
                     else if (index === 2) { atk *= 5; } 
                     else if (index === 3) { hp *= 7.5; } 
                     else if (index === 4) { speed *= 30; } 
@@ -607,12 +607,13 @@
             }
         }
 
-        function drawCharacter(ctx, icon, x, y) {
+        function drawCharacter(ctx, icon, x, y, isAlly = false) {
             ctx.save();
             ctx.font = "52px Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(icon, x + 15, y - 18);
+            let drawX = isAlly ? x + 25 : x + 15;
+            ctx.fillText(icon, drawX, y - 18);
             ctx.restore();
         }
 
@@ -636,7 +637,6 @@
             ctx.fillStyle = "#555"; ctx.fillRect(710, 245, bw, bh); 
             ctx.fillStyle = "#e74c3c"; ctx.fillRect(710, 245, bw * Math.max(0, enemyCastleHP / maxEnemyCastleHP), bh);
 
-            // もしボス曲のタップ待ち中なら、画面に案内を出す
             if (pendingBossMusic) {
                 ctx.save();
                 ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
@@ -730,7 +730,7 @@
                         }
                     }
                 }
-                drawCharacter(ctx, currentIcon, m.x, 340);
+                drawCharacter(ctx, currentIcon, m.x, 340, true);
             });
 
             let initialEnemyCount = activeHeroes.length;
@@ -814,7 +814,7 @@
                         playerCastleHP -= 0.6;
                     }
                 }
-                drawCharacter(ctx, h.icon, h.x, 340);
+                drawCharacter(ctx, h.icon, h.x, 340, false);
             });
 
             activeHeroes.forEach((h) => {
