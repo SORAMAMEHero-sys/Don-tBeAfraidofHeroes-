@@ -612,7 +612,12 @@
             ctx.font = "52px Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            let drawX = isAlly ? x + 25 : x + 15;
+            
+            // 2文字以上の複合絵文字（例: 🧟‍♀️⚔️ や ❤️‍🔥👺 など）の場合は、左側に少し寄せて本体判定を合わせる
+            let isComposite = [...icon].length > 1;
+            let offset = isComposite ? -12 : 0;
+
+            let drawX = (isAlly ? x + 25 : x + 15) + offset;
             ctx.fillText(icon, drawX, y - 18);
             ctx.restore();
         }
