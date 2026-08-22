@@ -79,14 +79,13 @@
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         let audioUnlocked = false;
+        let pendingBossMusic = false; // ボス曲のタップ待ちフラグ
 
-        // スマホの自動再生ブロックを解除するためのタッチ/クリック監視
         function unlockAudio() {
             if (audioUnlocked) return;
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
-            // 無音のダミー音を鳴らしてスマホのロックを完全に解除
             try {
                 const buffer = audioCtx.createBuffer(1, 1, 22050);
                 const source = audioCtx.createBufferSource();
@@ -97,9 +96,19 @@
             audioUnlocked = true;
         }
 
-        // 画面のどこかを最初に触ったときに自動でロック解除
+        // 画面全体でタップを監視：もしボス曲待ちなら、ここで再生を発動させる！
+        function handleGlobalTouch() {
+            unlockAudio();
+            if (pendingBossMusic) {
+                pendingBossMusic = false;
+                // バナー表記を消すためにエフェクトを追加
+                effects.push({ x: 400, y: 150, t: "🎵 ボス曲再生開始！", life: 40 });
+                playBGM(null, 'boss.mp3');
+            }
+        }
+
         ['click', 'touchstart', 'keydown'].forEach(evt => {
-            window.addEventListener(evt, unlockAudio, { once: true });
+            window.addEventListener(evt, handleGlobalTouch);
         });
 
         const bgmFiles = {
@@ -112,9 +121,15 @@
         let currentBgm = null;
 
         function playBGM(stage, overrideFile = null) {
-            unlockAudio();
             let file = overrideFile || bgmFiles[stage];
             if (!file) return;
+
+            // もしボス曲を指定されていて、まだスマホにブロックされる恐れがある場合の保険としてタップ待ちにする
+            if (file === 'boss.mp3' && !audioUnlocked) {
+                pendingBossMusic = true;
+                return;
+            }
+
             if (currentBgm && currentBgm.dataset.file === file) {
                 if (currentBgm.paused) { currentBgm.play().catch(e => console.log("BGM再開ブロック:", e)); }
                 return;
@@ -124,7 +139,12 @@
             currentBgm.dataset.file = file;
             currentBgm.loop = true;
             currentBgm.volume = 0.5;
-            currentBgm.play().catch(e => console.log("BGM自動再生ブロック:", e));
+            currentBgm.play().catch(e => {
+                console.log("BGM自動再生ブロック検知 -> タップ待ちに切り替え");
+                if (file === 'boss.mp3') {
+                    pendingBossMusic = true;
+                }
+            });
         }
 
         function stopBGM() {
@@ -616,6 +636,19 @@
             ctx.fillStyle = "#555"; ctx.fillRect(710, 245, bw, bh); 
             ctx.fillStyle = "#e74c3c"; ctx.fillRect(710, 245, bw * Math.max(0, enemyCastleHP / maxEnemyCastleHP), bh);
 
+            // もしボス曲のタップ待ち中なら、画面に案内を出す
+            if (pendingBossMusic) {
+                ctx.save();
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                ctx.fillRect(150, 150, 500, 60);
+                ctx.fillStyle = "#ffcc00";
+                ctx.font = "bold 20px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("🔊 画面をタップしてボス曲を再生！", 400, 180);
+                ctx.restore();
+            }
+
             activeMonsters.forEach((m) => {
                 let target = activeHeroes.find(h => Math.abs(h.x - m.x) < m.range);
                 let currentIcon = m.evolved ? m.evolveIcon : m.icon;
@@ -867,6 +900,7 @@
         function startBattle(stageNum) { 
             unlockAudio();
             currentStage = stageNum; 
+            pendingBossMusic = false;
             stage10ShockwaveTriggered = false;
             stage12ShockwaveTriggered = false;
             stage13ShockwaveTriggered = false;
