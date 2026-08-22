@@ -613,10 +613,12 @@
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             
-            let isComposite = [...icon].length > 1;
-            let offset = isComposite ? -12 : 0;
+            // ゾンビ戦士(🧟‍♀️⚔️など)の場合のオフセット調整
+            let drawX = isAlly ? x + 25 : x + 15;
+            if (icon.includes("🧟")) {
+                drawX -= 15;
+            }
 
-            let drawX = (isAlly ? x + 25 : x + 15) + offset;
             ctx.fillText(icon, drawX, y - 18);
             ctx.restore();
         }
@@ -821,7 +823,6 @@
                 drawCharacter(ctx, h.icon, h.x, 340, false);
             });
 
-            // ゾンビ戦士の復活＆報酬・ドロップ処理
             activeHeroes.forEach((h) => {
                 if (h.hp <= 0 && h.isZombieWarrior && !h.hasRevived) {
                     h.hasRevived = true;
@@ -847,7 +848,6 @@
             });
 
             activeMonsters = activeMonsters.filter(m => m.hp > 0);
-            // 完全に倒れた敵（ゾンビなら復活済みでHP0以下のもの）を配列から正しく除外
             activeHeroes = activeHeroes.filter(h => h.hp > 0 || (h.isZombieWarrior && !h.hasRevived));
             
             if (activeHeroes.length < initialEnemyCount) { playSound("defeat"); }
